@@ -1,6 +1,6 @@
 -- sql/schema.sql
 -- Azure SQL schema for Dementia app
-
+-- test
 IF NOT EXISTS (SELECT * FROM sys.schemas WHERE name = 'dementia_app')
     EXEC('CREATE SCHEMA dementia_app');
 GO
