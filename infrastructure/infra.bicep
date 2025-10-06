@@ -10,7 +10,7 @@ param sqlAliasName string = 'dementia-dev-alias'
 
 var sqlAliasFqdn = '${sqlAliasName}.database.windows.net'
 
-// Extract the logical server name (left of .database.windows.net) from provided FQDN
+// Extract the logical server name (left of .database.windows.net) from provided FQDN khjjvh
 var sqlServerName = split(sqlServerFqdn, '.')[0]
 
 // Optional: resource group of the SQL server; default to current RG
