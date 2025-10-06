@@ -1,7 +1,7 @@
 const { getPool } = require('../shared/db');
 const { checkApiKey } = require('../shared/auth');
 
-//test
+//test again
 module.exports = async function (context, req) {
   try {
     checkApiKey(req);
