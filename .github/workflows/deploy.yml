@@ -10,11 +10,13 @@ permissions:
   contents: read
 
 env:
+  # App RG (where your Functions and other app resources live)
   AZURE_RESOURCE_GROUP: rg-dementia
   AZURE_REGION: eastus
   DATABASE_NAME: dementia
-  # Optional: define this to skip auto-discovery
-  # SQL_SERVER_FQDN: dementia-sql-dev.database.windows.net
+
+  # SQL server lives in a DIFFERENT RG:
+  SQL_SERVER_RG: rg-sql-free-eastus2
 
 concurrency:
   group: deploy-main
@@ -23,6 +25,7 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -34,7 +37,14 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Ensure resource group exists (idempotent)
+      - name: Verify Azure CLI
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          az version
+          az account show --query "{name:name, id:id, user:user.name}" -o table
+
+      - name: Ensure app resource group exists (idempotent)
         shell: bash
         run: |
           set -Eeuo pipefail
@@ -45,22 +55,26 @@ jobs:
             echo "Resource group $AZURE_RESOURCE_GROUP already exists."
           fi
 
-      - name: Resolve SQL server FQDN (env or auto)
+      - name: Resolve SQL server FQDN (secret or auto in SQL RG)
         id: fqdn
         shell: bash
+        env:
+          # Make sure you created this repo secret with your server FQDN
+          # e.g. dementia-sql-dev.database.windows.net
+          SQL_SERVER_FQDN: ${{ secrets.SQL_SERVER_FQDN }}
         run: |
           set -Eeuo pipefail
           if [ -n "${SQL_SERVER_FQDN:-}" ]; then
-            echo "Using provided SQL_SERVER_FQDN: $SQL_SERVER_FQDN"
+            echo "Using SQL server from secret."
             echo "fqdn=$SQL_SERVER_FQDN" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
-          # Try to auto-discover a single SQL server in the RG
-          FQDN=$(az sql server list -g "$AZURE_RESOURCE_GROUP" --query "[0].fullyQualifiedDomainName" -o tsv)
+          echo "No SQL_SERVER_FQDN secret set; discovering one in RG: $SQL_SERVER_RG"
+          FQDN=$(az sql server list -g "$SQL_SERVER_RG" --query "[0].fullyQualifiedDomainName" -o tsv)
           if [ -z "$FQDN" ] || [ "$FQDN" = "None" ]; then
-            echo "No SQL server found in resource group $AZURE_RESOURCE_GROUP."
-            echo "Set env.SQL_SERVER_FQDN or create the server first."
+            echo "No SQL server found in $SQL_SERVER_RG."
+            echo "Set the repo secret SQL_SERVER_FQDN or create the server first."
             exit 1
           fi
           echo "Discovered SQL server: $FQDN"
@@ -77,6 +91,7 @@ jobs:
             -f infrastructure/infra.bicep \
             -p apiKey="${{ secrets.API_KEY }}" \
                sqlServerFqdn="${{ steps.fqdn.outputs.fqdn }}" \
+               sqlServerResourceGroup="${SQL_SERVER_RG}" \
                sqlDatabase="${DATABASE_NAME}" \
             -o none
 
@@ -90,6 +105,7 @@ jobs:
             -g "$AZURE_RESOURCE_GROUP" \
             -n "$DEPLOYMENT_NAME" \
             --query "properties.outputs.functionAppName.value" -o tsv)
+          echo "Function App: $NAME"
           echo "name=$NAME" >> "$GITHUB_OUTPUT"
 
       - name: Zip package
