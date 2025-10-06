@@ -1,7 +1,9 @@
 name: Deploy Serverless Dementia API (Azure Functions)
+
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
+  workflow_dispatch:
 
 permissions:
   id-token: write
@@ -10,21 +12,18 @@ permissions:
 env:
   AZURE_RESOURCE_GROUP: rg-dementia
   AZURE_REGION: eastus
+  DATABASE_NAME: dementia
+
+concurrency:
+  group: deploy-main
+  cancel-in-progress: true
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Install deps
-        working-directory: api
-        run: npm ci
+      - name: Checkout
+        uses: actions/checkout@v4
 
       - name: Azure login (OIDC)
         uses: azure/login@v2
@@ -33,36 +32,70 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Deploy infra (Bicep)
-        run: |
-          if ! az group show --name "$AZURE_RESOURCE_GROUP" >/dev/null 2>&1; then
-            echo "Creating $AZURE_RESOURCE_GROUP in $AZURE_REGION..."
-            az group create --name "$AZURE_RESOURCE_GROUP" --location "$AZURE_REGION" --output none
-          else
-            echo "Resource group $AZURE_RESOURCE_GROUP already exists."
-          fi
-          az deployment group create -g "$AZURE_RESOURCE_GROUP" -f infrastructure/infra.bicep -p sqlDatabase='***'
+      # Use the official Azure CLI action instead of setup-azure-cli
+      - name: Azure CLI (ensure RG + deploy + capture outputs)
+        id: azdeploy
+        uses: azure/cli@v2
+        with:
+          azcliversion: 2.59.0
+          inlineScript: |
+            set -Eeuo pipefail
+            DEPLOYMENT_NAME=infra
+            mkdir -p "$GITHUB_WORKSPACE/.out"
 
+            # Idempotent RG ensure (avoid CLI bug by -o none)
+            if ! az group show --name "$AZURE_RESOURCE_GROUP" >/dev/null 2>&1; then
+              echo "Creating $AZURE_RESOURCE_GROUP in $AZURE_REGION..."
+              az group create --name "$AZURE_RESOURCE_GROUP" --location "$AZURE_REGION" -o none
+            else
+              echo "Resource group $AZURE_RESOURCE_GROUP already exists."
+            fi
 
-      - name: Get Function App name
-        id: getname
+            # Deploy without printing the response (avoid 'response was already consumed')
+            az deployment group create \
+              -g "$AZURE_RESOURCE_GROUP" \
+              -n "$DEPLOYMENT_NAME" \
+              -f infrastructure/infra.bicep \
+              -p sqlDatabase="${DATABASE_NAME}" \
+              -o none
+
+            # Read outputs via 'show' and stash them in workspace files
+            az deployment group show \
+              -g "$AZURE_RESOURCE_GROUP" \
+              -n "$DEPLOYMENT_NAME" \
+              --query "properties.outputs.functionAppName.value" -o tsv > "$GITHUB_WORKSPACE/.out/function_app_name"
+
+            az deployment group show \
+              -g "$AZURE_RESOURCE_GROUP" \
+              -n "$DEPLOYMENT_NAME" \
+              --query "properties.outputs.functionUrl.value" -o tsv > "$GITHUB_WORKSPACE/.out/function_url"
+
+      # Convert the files created inside the CLI container into step outputs (outside the container)
+      - name: Capture outputs
+        id: outs
+        shell: bash
         run: |
-          NAME=$(az deployment group list -g $AZURE_RESOURCE_GROUP --query "[0].properties.outputs.functionAppName.value" -o tsv)
-          echo "name=$NAME" >> $GITHUB_OUTPUT
+          set -Eeuo pipefail
+          NAME=$(cat .out/function_app_name)
+          URL=$(cat .out/function_url)
+          echo "name=$NAME" >> "$GITHUB_OUTPUT"
+          echo "url=$URL"  >> "$GITHUB_OUTPUT"
 
       - name: Zip package
+        shell: bash
         run: |
+          set -Eeuo pipefail
           cd api
           zip -r ../function.zip .
 
       - name: Deploy to Function App
         uses: azure/functions-action@v1
         with:
-          app-name: ${{ steps.getname.outputs.name }}
+          app-name: ${{ steps.outs.outputs.name }}
           package: function.zip
 
       - name: Show URLs
+        shell: bash
         run: |
-          URL=$(az deployment group list -g $AZURE_RESOURCE_GROUP --query "[0].properties.outputs.functionUrl.value" -o tsv)
-          echo "Swagger UI: $URL/swagger"
-          echo "Swagger JSON: $URL/swagger.json"
+          echo "Swagger UI: ${{ steps.outs.outputs.url }}/swagger"
+          echo "Swagger JSON: ${{ steps.outs.outputs.url }}/swagger.json"

@@ -1,39 +1,75 @@
-targetScope = 'resourceGroup'
-
-@description('Azure region for resources (defaults to current RG location).')
+param namePrefix string = 'dementia'
 param location string = resourceGroup().location
-
-//@description('Short name of the Azure SQL logical server (no FQDN).')
-//param sqlServerName string
-
-@description('Database name to connect to on the server.')
-param sqlDatabase string
-
+@secure()
+param apiKey string
+param sqlServerFqdn string // e.g. dementia-sql-xxxxx.database.windows.net
+param sqlDatabase string   // e.g. dementia
 @description('DNS alias name to use for -dev- (server-level alias).')
 param sqlAliasName string = 'dementia-dev-alias'
 
-@description('Optional tags to apply to resources created in this template.')
-param tags object = {}
-
-@description('Forces the deployment script to re-run each deployment (uses current UTC time by default).')
+@description('Forces the alias repoint script to re-run each deployment.')
 param forceRerun string = utcNow()
 
-// Use environment() to avoid hardcoding cloud URLs
+// Cloud-portable SQL host suffix (e.g., database.windows.net in Public)
 var sqlHostSuffix = environment().suffixes.sqlServerHostname
 var sqlAliasFqdn = '${sqlAliasName}.${sqlHostSuffix}'
 
-// -----------------------
-// User-Assigned Managed Identity for the deployment script
-// -----------------------
+resource stg 'Microsoft.Storage/storageAccounts@2023-05-01' = {
+  name: toLower('${namePrefix}funcstg')
+  location: location
+  sku: { name: 'Standard_LRS' }
+  kind: 'StorageV2'
+  properties: {
+    allowBlobPublicAccess: false
+    minimumTlsVersion: 'TLS1_2'
+  }
+}
+
+resource ai 'Microsoft.Insights/components@2020-02-02' = {
+  name: '${namePrefix}-appi'
+  location: location
+  kind: 'web'
+  properties: { Application_Type: 'web' }
+}
+
+resource plan 'Microsoft.Web/serverfarms@2023-12-01' = {
+  name: '${namePrefix}-func-plan'
+  location: location
+  sku: { name: 'Y1', tier: 'Dynamic' } // Consumption
+}
+
+resource app 'Microsoft.Web/sites@2023-12-01' = {
+  name: '${namePrefix}-func'
+  location: location
+  kind: 'functionapp'
+  identity: { type: 'SystemAssigned' }
+  properties: {
+    httpsOnly: true
+    serverFarmId: plan.id
+    siteConfig: {
+      appSettings: [
+        { name: 'AzureWebJobsStorage', value: stg.properties.primaryEndpoints.blob }
+        { name: 'FUNCTIONS_EXTENSION_VERSION', value: '~4' }
+        { name: 'FUNCTIONS_WORKER_RUNTIME', value: 'node' }
+        { name: 'WEBSITE_RUN_FROM_PACKAGE', value: '1' }
+        { name: 'APPLICATIONINSIGHTS_CONNECTION_STRING', value: ai.properties.ConnectionString }
+        { name: 'API_KEY', value: apiKey }
+        { name: 'SQL_SERVER', value: sqlAliasFqdn }
+        { name: 'SQL_DATABASE', value: sqlDatabase }
+        { name: 'SQL_ENCRYPT', value: 'true' }
+      ]
+      http20Enabled: true
+    }
+  }
+}
+
+// ---------- Azure SQL DNS Alias automation (dev) ----------
+
 resource aliasScriptUami 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
   name: 'uami-alias-repoint-dev'
   location: location
-  tags: tags
 }
 
-// -----------------------
-// Deployment Script (Azure CLI) to ensure alias exists or is repointed
-// -----------------------
 resource aliasRepoint 'Microsoft.Resources/deploymentScripts@2023-08-01' = {
   name: 'aliasRepoint-dev'
   location: location
@@ -44,7 +80,6 @@ resource aliasRepoint 'Microsoft.Resources/deploymentScripts@2023-08-01' = {
       '${aliasScriptUami.id}': {}
     }
   }
-  tags: tags
   properties: {
     azCliVersion: '2.59.0'
     forceUpdateTag: forceRerun
@@ -55,10 +90,10 @@ resource aliasRepoint 'Microsoft.Resources/deploymentScripts@2023-08-01' = {
       set -euo pipefail
 
       RG='${resourceGroup().name}'
-      SERVER_NAME='${sqlServerName}'
+      SERVER_NAME='${split(sqlServerFqdn, ".")[0]}'
       ALIAS='${sqlAliasName}'
 
-      echo "Ensuring SQL DNS alias '${sqlAliasName}' points to server '${sqlServerName}' in RG '${resourceGroup().name}'..."
+      echo "Ensuring SQL DNS alias '${sqlAliasName}' points to server '${split(sqlServerFqdn, ".")[0]}' in RG '${resourceGroup().name}'..."
 
       # 1) If alias already present on the desired server, exit.
       if az sql server dns-alias show --name "$ALIAS" --resource-group "$RG" --server "$SERVER_NAME" >/dev/null 2>&1; then
@@ -86,27 +121,17 @@ resource aliasRepoint 'Microsoft.Resources/deploymentScripts@2023-08-01' = {
   }
 }
 
-// -----------------------
-// Grant the UAMI permission to manage SQL alias (Contributor at RG scope)
-// -----------------------
 resource aliasRepointRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(resourceGroup().id, aliasScriptUami.name, 'contributor-role')
+  name: guid(resourceGroup().id, 'alias-repoint-dev-role')
   scope: resourceGroup()
   properties: {
-    roleDefinitionId: subscriptionResourceId(
-      'Microsoft.Authorization/roleDefinitions',
-      'b24988ac-6180-42a0-ab88-20f7382dd24c' // Contributor
-    )
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'b24988ac-6180-42a0-ab88-20f7382dd24c') // Contributor
     principalId: aliasScriptUami.properties.principalId
     principalType: 'ServicePrincipal'
   }
 }
 
-// -----------------------
-// Outputs (use these in your app / pipelines)
-// -----------------------
-@description('Stable server hostname your app should use (server-level DNS alias).')
-output devSqlHost string = sqlAliasFqdn
 
-@description('Convenience connection string using the alias.')
-output devSqlConnection string = 'Server=tcp:${sqlAliasFqdn},1433;Initial Catalog=${sqlDatabase};Persist Security Info=False;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;'
+output principalId string = app.identity.principalId
+output functionAppName string = app.name
+output webAppUrl string = 'https://${app.properties.defaultHostName}'
