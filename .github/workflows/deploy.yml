@@ -13,6 +13,8 @@ env:
   AZURE_RESOURCE_GROUP: rg-dementia
   AZURE_REGION: eastus
   DATABASE_NAME: dementia
+  # Optional: define this to skip auto-discovery
+  # SQL_SERVER_FQDN: dementia-sql-dev.database.windows.net
 
 concurrency:
   group: deploy-main
@@ -32,13 +34,6 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Verify Azure CLI
-        shell: bash
-        run: |
-          set -Eeuo pipefail
-          az version
-          az account show --query "{name:name, id:id, user:user.name}" -o table
-
       - name: Ensure resource group exists (idempotent)
         shell: bash
         run: |
@@ -50,6 +45,27 @@ jobs:
             echo "Resource group $AZURE_RESOURCE_GROUP already exists."
           fi
 
+      - name: Resolve SQL server FQDN (env or auto)
+        id: fqdn
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          if [ -n "${SQL_SERVER_FQDN:-}" ]; then
+            echo "Using provided SQL_SERVER_FQDN: $SQL_SERVER_FQDN"
+            echo "fqdn=$SQL_SERVER_FQDN" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # Try to auto-discover a single SQL server in the RG
+          FQDN=$(az sql server list -g "$AZURE_RESOURCE_GROUP" --query "[0].fullyQualifiedDomainName" -o tsv)
+          if [ -z "$FQDN" ] || [ "$FQDN" = "None" ]; then
+            echo "No SQL server found in resource group $AZURE_RESOURCE_GROUP."
+            echo "Set env.SQL_SERVER_FQDN or create the server first."
+            exit 1
+          fi
+          echo "Discovered SQL server: $FQDN"
+          echo "fqdn=$FQDN" >> "$GITHUB_OUTPUT"
+
       - name: Deploy infra (Bicep)
         shell: bash
         run: |
@@ -59,7 +75,9 @@ jobs:
             -g "$AZURE_RESOURCE_GROUP" \
             -n "$DEPLOYMENT_NAME" \
             -f infrastructure/infra.bicep \
-            -p sqlDatabase="${DATABASE_NAME}" \
+            -p apiKey="${{ secrets.API_KEY }}" \
+               sqlServerFqdn="${{ steps.fqdn.outputs.fqdn }}" \
+               sqlDatabase="${DATABASE_NAME}" \
             -o none
 
       - name: Get Function App name
