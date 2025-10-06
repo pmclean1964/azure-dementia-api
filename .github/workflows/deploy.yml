@@ -84,16 +84,17 @@ jobs:
         shell: bash
         run: |
           set -Eeuo pipefail
+          set -Eeuo pipefail
           DEPLOYMENT_NAME=infra
           az deployment group create \
-            -g "$AZURE_RESOURCE_GROUP" \
-            -n "$DEPLOYMENT_NAME" \
-            -f infrastructure/infra.bicep \
-            -p apiKey="${{ secrets.API_KEY }}" \
-               sqlServerFqdn="${{ steps.fqdn.outputs.fqdn }}" \
-               sqlServerResourceGroup="${SQL_SERVER_RG}" \
-               sqlDatabase="${DATABASE_NAME}" \
-            -o none
+              -g "$AZURE_RESOURCE_GROUP" \
+              -n "$DEPLOYMENT_NAME" \
+              -f infrastructure/infra.bicep \
+              -p apiKey="***" \
+              sqlServerFqdn="***" \
+              sqlDatabase="${DATABASE_NAME}" \
+              -o none
+
 
       - name: Get Function App name
         id: getname
