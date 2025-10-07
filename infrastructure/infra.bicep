@@ -4,6 +4,7 @@ param location string = resourceGroup().location
 param apiKey string
 param sqlServerFqdn string // e.g. dementia-sql-xxxxx.database.windows.net
 param sqlDatabase string   // e.g. dementia
+param sqlServerResourceGroup string
 @description('DNS alias name to use for -dev- (server-level alias).')
 param sqlAliasName string = 'dementia-dev-alias'
 
@@ -94,7 +95,7 @@ resource aliasRepoint 'Microsoft.Resources/deploymentScripts@2023-08-01' = {
     scriptContent: '''
       set -euo pipefail
 
-      RG='${resourceGroup().name}'
+      RG='${sqlServerResourceGroup}'
       SERVER_NAME='${serverName}'
       ALIAS='${sqlAliasName}'
 

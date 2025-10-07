@@ -93,6 +93,7 @@ jobs:
               -p apiKey="***" \
               sqlServerFqdn="${{ steps.dbsecrets.outputs.fqdn }}" \
               sqlDatabase="${{ steps.dbsecrets.outputs.dbname }}" \
+              sqlServerResourceGroup="${{ steps.dbsecrets.outputs.dbrg }}" \
               -o none
 
 
