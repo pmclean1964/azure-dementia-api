@@ -1,0 +1,140 @@
+name: Deploy Infrastructure (Bicep)
+
+on:
+  workflow_dispatch:
+    inputs:
+      resourceGroupName:
+        description: Azure Resource Group to deploy into
+        required: false
+        type: string
+      location:
+        description: Azure location (e.g., westeurope)
+        required: false
+        type: string
+      functionAppName:
+        description: Function App name (must be globally unique)
+        required: false
+        type: string
+      storageAccountName:
+        description: Storage account name (3-24 lowercase alphanumeric, globally unique)
+        required: false
+        type: string
+      keyVaultResourceGroup:
+        description: Resource group of the existing Key Vault
+        required: false
+        type: string
+      keyVaultName:
+        description: Name of the existing Key Vault containing DB secrets
+        required: false
+        type: string
+      whatIf:
+        description: Run a what-if preview before deploy
+        required: false
+        default: false
+        type: boolean
+  push:
+    branches: [ main ]
+    paths:
+      - 'infrastructure/**'
+
+permissions:
+  id-token: write   # required for OIDC login to Azure
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Azure Login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Compute parameters
+        id: params
+        shell: bash
+        env:
+          IN_RG: ${{ inputs.resourceGroupName }}
+          IN_LOC: ${{ inputs.location }}
+          IN_FUNC: ${{ inputs.functionAppName }}
+          IN_STG: ${{ inputs.storageAccountName }}
+          IN_KV_RG: ${{ inputs.keyVaultResourceGroup }}
+          IN_KV: ${{ inputs.keyVaultName }}
+          VAR_RG: ${{ vars.RESOURCE_GROUP_NAME }}
+          VAR_LOC: ${{ vars.AZURE_LOCATION }}
+          VAR_FUNC: ${{ vars.FUNCTION_APP_NAME }}
+          VAR_STG: ${{ vars.STORAGE_ACCOUNT_NAME }}
+          VAR_KV_RG: ${{ vars.KEY_VAULT_RESOURCE_GROUP }}
+          VAR_KV: ${{ vars.KEY_VAULT_NAME }}
+        run: |
+          set -euo pipefail
+          # Coalesce inputs with repo/environment variables
+          RG="${IN_RG:-${VAR_RG:-}}"
+          LOCATION="${IN_LOC:-${VAR_LOC:-}}"
+          FUNCTION_APP_NAME="${IN_FUNC:-${VAR_FUNC:-}}"
+          STORAGE_ACCOUNT_NAME="${IN_STG:-${VAR_STG:-}}"
+          KV_RG="${IN_KV_RG:-${VAR_KV_RG:-}}"
+          KV_NAME="${IN_KV:-${VAR_KV:-}}"
+
+          missing=()
+          [[ -z "$RG" ]] && missing+=(resourceGroupName/RESOURCE_GROUP_NAME)
+          [[ -z "$LOCATION" ]] && missing+=(location/AZURE_LOCATION)
+          [[ -z "$FUNCTION_APP_NAME" ]] && missing+=(functionAppName/FUNCTION_APP_NAME)
+          [[ -z "$STORAGE_ACCOUNT_NAME" ]] && missing+=(storageAccountName/STORAGE_ACCOUNT_NAME)
+          [[ -z "$KV_RG" ]] && missing+=(keyVaultResourceGroup/KEY_VAULT_RESOURCE_GROUP)
+          [[ -z "$KV_NAME" ]] && missing+=(keyVaultName/KEY_VAULT_NAME)
+
+          if (( ${#missing[@]} > 0 )); then
+            echo "Required parameters not provided: ${missing[*]}" >&2
+            echo "Provide them via workflow inputs or repository/environment variables." >&2
+            exit 1
+          fi
+
+          echo "rg=$RG" >> $GITHUB_OUTPUT
+          echo "location=$LOCATION" >> $GITHUB_OUTPUT
+          echo "functionAppName=$FUNCTION_APP_NAME" >> $GITHUB_OUTPUT
+          echo "storageAccountName=$STORAGE_ACCOUNT_NAME" >> $GITHUB_OUTPUT
+          echo "keyVaultResourceGroup=$KV_RG" >> $GITHUB_OUTPUT
+          echo "keyVaultName=$KV_NAME" >> $GITHUB_OUTPUT
+
+      - name: What-If (preview)
+        if: inputs.whatIf == true
+        uses: azure/cli@v2
+        with:
+          inlineScript: |
+            az group create \
+              --name '${{ steps.params.outputs.rg }}' \
+              --location '${{ steps.params.outputs.location }}'
+            az deployment group what-if \
+              --resource-group '${{ steps.params.outputs.rg }}' \
+              --template-file infrastructure/main.bicep \
+              --parameters \
+                location='${{ steps.params.outputs.location }}' \
+                functionAppName='${{ steps.params.outputs.functionAppName }}' \
+                storageAccountName='${{ steps.params.outputs.storageAccountName }}' \
+                keyVaultResourceGroup='${{ steps.params.outputs.keyVaultResourceGroup }}' \
+                keyVaultName='${{ steps.params.outputs.keyVaultName }}'
+
+      - name: Deploy Bicep
+        uses: azure/cli@v2
+        with:
+          inlineScript: |
+            az group create \
+              --name '${{ steps.params.outputs.rg }}' \
+              --location '${{ steps.params.outputs.location }}'
+            az deployment group create \
+              --resource-group '${{ steps.params.outputs.rg }}' \
+              --template-file infrastructure/main.bicep \
+              --parameters \
+                location='${{ steps.params.outputs.location }}' \
+                functionAppName='${{ steps.params.outputs.functionAppName }}' \
+                storageAccountName='${{ steps.params.outputs.storageAccountName }}' \
+                keyVaultResourceGroup='${{ steps.params.outputs.keyVaultResourceGroup }}' \
+                keyVaultName='${{ steps.params.outputs.keyVaultName }}' \
+              --query "{name:name, status:properties.provisioningState}" \
+              -o jsonc
