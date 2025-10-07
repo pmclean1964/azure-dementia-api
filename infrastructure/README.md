@@ -134,3 +134,24 @@ CI/CD with GitHub Actions
     - parametersFile=infrastructure/parameters.example.json
   - Optionally enable whatIf=true to preview changes.
 - On push to main affecting files under infrastructure/**, the workflow will deploy using repository Variables when inputs are not provided. If any required values are still missing, it will attempt to read them from the default parameters file before failing with guidance.
+
+
+Key Vault access and RBAC permissions
+- The template uses App Service Key Vault references for DB_* settings. The Function App’s managed identity must be able to read secrets from the specified Key Vault.
+- New parameter: enableKvRbacAssignment (bool, default false). When set to true, the deployment will attempt to assign the Key Vault Secrets User role to the Function App identity at the Key Vault scope. This requires the deploying principal to have Microsoft.Authorization/roleAssignments/write on the Key Vault or its resource group/subscription.
+- If you do not have permissions to create role assignments (common in GitHub Actions with limited rights), leave enableKvRbacAssignment=false and grant the Function App identity access to the Key Vault out-of-band (e.g., by a privileged operator or a separate pipeline).
+- To enable via CLI parameters:
+  az deployment group create ^
+    --resource-group <rg> ^
+    --template-file infrastructure\main.bicep ^
+    --parameters enableKvRbacAssignment=true keyVaultName=<kv> ...
+- To enable via parameters file, set:
+  "enableKvRbacAssignment": { "value": true }
+
+Troubleshooting
+- Error: Authorization failed for template resource '.../providers/Microsoft.Authorization/roleAssignments/...'. The client '<objectId>' does not have permission to perform action 'Microsoft.Authorization/roleAssignments/write' ...
+  - Cause: The deploying identity lacks rights to create RBAC assignments at the Key Vault scope.
+  - Fix options:
+    1) Run deployment with enableKvRbacAssignment=false (default) and grant Key Vault access separately; or
+    2) Have a privileged identity run the deployment with enableKvRbacAssignment=true; or
+    3) If your Key Vault uses access policies (not Azure RBAC), grant the Function App identity get/list permissions on secrets via access policies.

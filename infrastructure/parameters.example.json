@@ -8,6 +8,7 @@
     "storageAccountName": { "value": "stgdementiaapi001" },
     "keyVaultResourceGroup": { "value": "rg-dementia-api" },
     "keyVaultName": { "value": "dementiadbsecrets" },
+    "enableKvRbacAssignment": { "value": false },
     "dbFqdnSecretName": { "value": "db-fqdn" },
     "dbNameSecretName": { "value": "db-name" },
     "dbLoginSecretName": { "value": "db-login" },

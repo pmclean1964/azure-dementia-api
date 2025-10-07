@@ -20,6 +20,9 @@ param keyVaultResourceGroup string = resourceGroup().name
 @description('Name of the existing Key Vault that stores DB secrets')
 param keyVaultName string
 
+@description('If true, create an RBAC role assignment on the Key Vault to grant the Function App identity access to secrets. Requires deployer to have Microsoft.Authorization/roleAssignments/write at the Key Vault scope.')
+param enableKvRbacAssignment bool = false
+
 @description('Secret name for DB FQDN in Key Vault')
 param dbFqdnSecretName string = 'db-fqdn'
 
@@ -132,8 +135,8 @@ resource func 'Microsoft.Web/sites@2022-09-01' = {
   }
 }
 
-// Grant Function App access to Key Vault secrets via RBAC (Key Vault Secrets User) via module at KV RG scope
-module kvRole 'modules/kv-role.bicep' = {
+// Grant Function App access to Key Vault secrets via RBAC (Key Vault Secrets User) via module at KV RG scope (optional)
+module kvRole 'modules/kv-role.bicep' = if (enableKvRbacAssignment) {
   name: 'kvRole-${uniqueString(kv.id, functionAppName)}'
   scope: resourceGroup(keyVaultResourceGroup)
   params: {
