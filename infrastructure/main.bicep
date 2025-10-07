@@ -152,3 +152,4 @@ output functionAppNameOut string = functionAppName
 output storageAccountNameOut string = storageAccountName
 output functionAppDefaultHostname string = func.properties.defaultHostName
 output functionAppBaseUrl string = 'https://${func.properties.defaultHostName}'
+output apiBaseUrl string = 'https://${func.properties.defaultHostName}'

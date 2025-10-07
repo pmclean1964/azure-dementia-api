@@ -3,7 +3,7 @@
   "contentVersion": "1.0.0.0",
   "parameters": {
     "resourceGroupName": { "value": "rg-dementia-api" },
-    "location": { "value": "westeurope" },
+    "location": { "value": "eastus2" },
     "functionAppName": { "value": "func-dementia-api-001" },
     "storageAccountName": { "value": "stgdementiaapi001" },
     "keyVaultResourceGroup": { "value": "rg-dementia-api" },

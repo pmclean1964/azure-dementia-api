@@ -116,7 +116,7 @@ CI/CD with GitHub Actions
   - AZURE_SUBSCRIPTION_ID — Subscription ID to deploy into
 - Provide parameters either as workflow_dispatch inputs when manually running, or via repository Variables (Settings > Variables):
   - RESOURCE_GROUP_NAME
-  - AZURE_LOCATION (e.g., westeurope)
+  - AZURE_LOCATION (e.g., eastus2)
   - FUNCTION_APP_NAME
   - STORAGE_ACCOUNT_NAME
   - KEY_VAULT_RESOURCE_GROUP
@@ -126,7 +126,7 @@ CI/CD with GitHub Actions
 - Manual run example (from GitHub UI):
   - Run workflow "Deploy Infrastructure (Bicep)" with inputs:
     - resourceGroupName=rg-dementia-api
-    - location=westeurope
+    - location=eastus2
     - functionAppName=func-dementia-api-001
     - storageAccountName=stgdementiaapi001
     - keyVaultResourceGroup=rg-dementia-api
@@ -161,12 +161,12 @@ How to find your API endpoint (Function App URL)
 - After deployment completes, you can discover the base URL and function routes in a few ways:
 
 1) From deployment outputs (recommended)
-- The Bicep template outputs functionAppBaseUrl and functionAppDefaultHostname.
+- The Bicep template outputs apiBaseUrl (alias) and functionAppBaseUrl, plus functionAppDefaultHostname.
 - Using Azure CLI, fetch them:
   az deployment group show ^
     --resource-group rg-dementia-api ^
     --name main ^
-    --query "properties.outputs.{url:functionAppBaseUrl.value, host:functionAppDefaultHostname.value}" -o tsv
+    --query "properties.outputs.{url:apiBaseUrl.value, host:functionAppDefaultHostname.value}" -o tsv
 - The base URL will look like: https://<your-func-app>.azurewebsites.net
 - Function invocation URLs follow: https://<your-func-app>.azurewebsites.net/api/<FunctionName>
 
