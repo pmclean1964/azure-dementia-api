@@ -14,6 +14,7 @@ env:
   AZURE_RESOURCE_GROUP: rg-dementia
   AZURE_REGION: eastus
   DATABASE_NAME: dementia
+  KV_NAME: dementiadbsecrets
 
   # SQL server lives in a DIFFERENT RG:
   SQL_SERVER_RG: rg-sql-free-eastus2
@@ -55,35 +56,34 @@ jobs:
             echo "Resource group $AZURE_RESOURCE_GROUP already exists."
           fi
 
-      - name: Resolve SQL server FQDN (secret or auto in SQL RG)
-        id: fqdn
+      - name: Fetch DB settings from Key Vault (dementiadbsecrets)
+        id: dbsecrets
         shell: bash
-        env:
-          # Make sure you created this repo secret with your server FQDN
-          # e.g. dementia-sql-dev.database.windows.net
-          SQL_SERVER_FQDN: ${{ secrets.SQL_SERVER_FQDN }}
         run: |
           set -Eeuo pipefail
-          if [ -n "${SQL_SERVER_FQDN:-}" ]; then
-            echo "Using SQL server from secret."
-            echo "fqdn=$SQL_SERVER_FQDN" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
+          echo "Reading DB connection data from Key Vault: $KV_NAME"
+          FQDN=$(az keyvault secret show --vault-name "$KV_NAME" --name "db-fqdn" --query value -o tsv)
+          DBNAME=$(az keyvault secret show --vault-name "$KV_NAME" --name "db-name" --query value -o tsv)
+          DBLOGIN=$(az keyvault secret show --vault-name "$KV_NAME" --name "db-login" --query value -o tsv || true)
+          DBPASS=$(az keyvault secret show --vault-name "$KV_NAME" --name "db-password" --query value -o tsv || true)
+          DBRG=$(az keyvault secret show --vault-name "$KV_NAME" --name "db-resource-group" --query value -o tsv)
 
-          echo "No SQL_SERVER_FQDN secret set; discovering one in RG: $SQL_SERVER_RG"
-          FQDN=$(az sql server list -g "$SQL_SERVER_RG" --query "[0].fullyQualifiedDomainName" -o tsv)
-          if [ -z "$FQDN" ] || [ "$FQDN" = "None" ]; then
-            echo "No SQL server found in $SQL_SERVER_RG."
-            echo "Set the repo secret SQL_SERVER_FQDN or create the server first."
+          if [ -z "$FQDN" ] || [ -z "$DBNAME" ] || [ -z "$DBRG" ]; then
+            echo "Missing required Key Vault secrets (db-fqdn, db-name, db-resource-group)."
             exit 1
           fi
-          echo "Discovered SQL server: $FQDN"
+
           echo "fqdn=$FQDN" >> "$GITHUB_OUTPUT"
+          echo "dbname=$DBNAME" >> "$GITHUB_OUTPUT"
+          echo "dbrg=$DBRG" >> "$GITHUB_OUTPUT"
+
+          # Export to environment for subsequent steps
+          echo "DATABASE_NAME=$DBNAME" >> "$GITHUB_ENV"
+          echo "SQL_SERVER_RG=$DBRG" >> "$GITHUB_ENV"
 
       - name: Deploy infra (Bicep)
         shell: bash
         run: |
-          set -Eeuo pipefail
           set -Eeuo pipefail
           DEPLOYMENT_NAME=infra
           az deployment group create \
@@ -91,8 +91,8 @@ jobs:
               -n "$DEPLOYMENT_NAME" \
               -f infrastructure/infra.bicep \
               -p apiKey="***" \
-              sqlServerFqdn="***" \
-              sqlDatabase="${DATABASE_NAME}" \
+              sqlServerFqdn="${{ steps.dbsecrets.outputs.fqdn }}" \
+              sqlDatabase="${{ steps.dbsecrets.outputs.dbname }}" \
               -o none
 
 
