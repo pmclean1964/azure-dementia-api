@@ -57,7 +57,7 @@ resource stg 'Microsoft.Storage/storageAccounts@2023-01-01' = {
 
 // Build the connection string using the primary key
 var storageKeys = listKeys(stg.id, '2023-01-01')
-var storageConn = 'DefaultEndpointsProtocol=https;AccountName=' + storageAccountName + ';AccountKey=' + storageKeys.keys[0].value + ';EndpointSuffix=' + environment().suffixes.storage
+var storageConn = 'DefaultEndpointsProtocol=https;AccountName=${storageAccountName};AccountKey=${storageKeys.keys[0].value};EndpointSuffix=${environment().suffixes.storage}'
 
 // Linux Consumption plan for Functions
 resource plan 'Microsoft.Web/serverfarms@2022-09-01' = {
@@ -130,17 +130,15 @@ resource func 'Microsoft.Web/sites@2022-09-01' = {
       ]
     }
   }
-  dependsOn: [ stg ]
 }
 
-// Grant Function App access to Key Vault secrets via RBAC (Key Vault Secrets User)
-resource kvSecretsRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(kv.id, functionAppName, 'kv-secrets-user')
-  scope: kv
-  properties: {
+// Grant Function App access to Key Vault secrets via RBAC (Key Vault Secrets User) via module at KV RG scope
+module kvRole 'modules/kv-role.bicep' = {
+  name: 'kvRole-${uniqueString(kv.id, functionAppName)}'
+  scope: resourceGroup(keyVaultResourceGroup)
+  params: {
+    keyVaultName: keyVaultName
     principalId: func.identity.principalId
-    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '4633458b-17de-408a-b874-0445c86b69e6')
-    principalType: 'ServicePrincipal'
   }
 }
 
