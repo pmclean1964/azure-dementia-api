@@ -137,3 +137,4 @@ output principalId string = app.identity.principalId
 output functionAppName string = app.name
 output webAppUrl string = 'https://${app.properties.defaultHostName}'
 output sqlServerFqdnOut string = sqlServerFqdn
+output sqlServerName string = serverName
