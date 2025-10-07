@@ -27,6 +27,10 @@ on:
         description: Name of the existing Key Vault containing DB secrets
         required: false
         type: string
+      parametersFile:
+        description: "Optional path to a parameters JSON file (default: infrastructure/parameters.example.json)"
+        required: false
+        type: string
       whatIf:
         description: Run a what-if preview before deploy
         required: false
@@ -65,6 +69,7 @@ jobs:
           IN_STG: ${{ inputs.storageAccountName }}
           IN_KV_RG: ${{ inputs.keyVaultResourceGroup }}
           IN_KV: ${{ inputs.keyVaultName }}
+          IN_PARAMS: ${{ inputs.parametersFile }}
           VAR_RG: ${{ vars.RESOURCE_GROUP_NAME }}
           VAR_LOC: ${{ vars.AZURE_LOCATION }}
           VAR_FUNC: ${{ vars.FUNCTION_APP_NAME }}
@@ -81,6 +86,20 @@ jobs:
           KV_RG="${IN_KV_RG:-${VAR_KV_RG:-}}"
           KV_NAME="${IN_KV:-${VAR_KV:-}}"
 
+          # Fallback: try to read missing params from a parameters file (default path)
+          PARAMS_FILE="${IN_PARAMS:-infrastructure/parameters.example.json}"
+          if [[ -f "$PARAMS_FILE" ]]; then
+            echo "Using parameters file: $PARAMS_FILE"
+            # Only populate values that are currently empty
+            [[ -z "$LOCATION" ]] && LOCATION=$(jq -r '.parameters.location.value // empty' "$PARAMS_FILE") || true
+            [[ -z "$FUNCTION_APP_NAME" ]] && FUNCTION_APP_NAME=$(jq -r '.parameters.functionAppName.value // empty' "$PARAMS_FILE") || true
+            [[ -z "$STORAGE_ACCOUNT_NAME" ]] && STORAGE_ACCOUNT_NAME=$(jq -r '.parameters.storageAccountName.value // empty' "$PARAMS_FILE") || true
+            [[ -z "$KV_RG" ]] && KV_RG=$(jq -r '.parameters.keyVaultResourceGroup.value // empty' "$PARAMS_FILE") || true
+            [[ -z "$KV_NAME" ]] && KV_NAME=$(jq -r '.parameters.keyVaultName.value // empty' "$PARAMS_FILE") || true
+            # resourceGroupName is not standard in ARM parameter files (deployment scope), but allow optional mapping if provided
+            [[ -z "$RG" ]] && RG=$(jq -r '.parameters.resourceGroupName.value // empty' "$PARAMS_FILE") || true
+          fi
+
           missing=()
           [[ -z "$RG" ]] && missing+=(resourceGroupName/RESOURCE_GROUP_NAME)
           [[ -z "$LOCATION" ]] && missing+=(location/AZURE_LOCATION)
@@ -91,7 +110,7 @@ jobs:
 
           if (( ${#missing[@]} > 0 )); then
             echo "Required parameters not provided: ${missing[*]}" >&2
-            echo "Provide them via workflow inputs or repository/environment variables." >&2
+            echo "Provide them via workflow inputs, repository variables, or a parameters file (${PARAMS_FILE})." >&2
             exit 1
           fi
 

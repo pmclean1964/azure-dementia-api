@@ -121,6 +121,7 @@ CI/CD with GitHub Actions
   - STORAGE_ACCOUNT_NAME
   - KEY_VAULT_RESOURCE_GROUP
   - KEY_VAULT_NAME
+- Optional: You may also supply a parameters JSON file path via the parametersFile input (defaults to infrastructure/parameters.example.json). Any missing inputs/variables will be read from this file if present.
 - Manual run example (from GitHub UI):
   - Run workflow "Deploy Infrastructure (Bicep)" with inputs:
     - resourceGroupName=rg-dementia-api
@@ -129,5 +130,6 @@ CI/CD with GitHub Actions
     - storageAccountName=stgdementiaapi001
     - keyVaultResourceGroup=rg-shared-secrets
     - keyVaultName=dementiadbsecrets
+    - parametersFile=infrastructure/parameters.example.json
   - Optionally enable whatIf=true to preview changes.
-- On push to main affecting files under infrastructure/**, the workflow will deploy using repository Variables when inputs are not provided.
+- On push to main affecting files under infrastructure/**, the workflow will deploy using repository Variables when inputs are not provided. If any required values are still missing, it will attempt to read them from the default parameters file before failing with guidance.
