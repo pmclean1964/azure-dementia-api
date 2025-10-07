@@ -81,6 +81,10 @@ resource aliasRepoint 'Microsoft.Resources/deploymentScripts@2023-08-01' = {
       '${aliasScriptUami.id}': {}
     }
   }
+  // Ensure RBAC is in place before the script runs
+  dependsOn: [
+    aliasRepointRole
+  ]
   properties: {
     azCliVersion: '2.59.0'
     forceUpdateTag: forceRerun
