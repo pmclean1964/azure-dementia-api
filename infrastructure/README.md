@@ -129,7 +129,7 @@ CI/CD with GitHub Actions
     - location=westeurope
     - functionAppName=func-dementia-api-001
     - storageAccountName=stgdementiaapi001
-    - keyVaultResourceGroup=rg-shared-secrets
+    - keyVaultResourceGroup=rg-dementia-api
     - keyVaultName=dementiadbsecrets
     - parametersFile=infrastructure/parameters.example.json
   - Optionally enable whatIf=true to preview changes.

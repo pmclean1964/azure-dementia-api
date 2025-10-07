@@ -6,7 +6,7 @@
     "location": { "value": "westeurope" },
     "functionAppName": { "value": "func-dementia-api-001" },
     "storageAccountName": { "value": "stgdementiaapi001" },
-    "keyVaultResourceGroup": { "value": "rg-shared-secrets" },
+    "keyVaultResourceGroup": { "value": "rg-dementia-api" },
     "keyVaultName": { "value": "dementiadbsecrets" },
     "dbFqdnSecretName": { "value": "db-fqdn" },
     "dbNameSecretName": { "value": "db-name" },

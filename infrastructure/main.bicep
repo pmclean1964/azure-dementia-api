@@ -15,7 +15,7 @@ param functionAppName string
 param storageAccountName string
 
 @description('Resource group name of the existing Key Vault that stores DB secrets (same subscription)')
-param keyVaultResourceGroup string
+param keyVaultResourceGroup string = resourceGroup().name
 
 @description('Name of the existing Key Vault that stores DB secrets')
 param keyVaultName string
@@ -55,9 +55,9 @@ resource stg 'Microsoft.Storage/storageAccounts@2023-01-01' = {
   }
 }
 
-// Build the connection string using the primary key
-var storageKeys = listKeys(stg.id, '2023-01-01')
-var storageConn = 'DefaultEndpointsProtocol=https;AccountName=${storageAccountName};AccountKey=${storageKeys.keys[0].value};EndpointSuffix=${environment().suffixes.storage}'
+// Build the connection string using a resource reference to listKeys()
+var primaryStorageKey = stg.listKeys().keys[0].value
+var storageConn = 'DefaultEndpointsProtocol=https;AccountName=${storageAccountName};AccountKey=${primaryStorageKey};EndpointSuffix=${environment().suffixes.storage}'
 
 // Linux Consumption plan for Functions
 resource plan 'Microsoft.Web/serverfarms@2022-09-01' = {
