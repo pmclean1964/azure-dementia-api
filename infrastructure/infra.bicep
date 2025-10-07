@@ -13,6 +13,7 @@ param forceRerun string = utcNow()
 // Cloud-portable SQL host suffix (e.g., database.windows.net in Public)
 var sqlHostSuffix = environment().suffixes.sqlServerHostname
 var sqlAliasFqdn = '${sqlAliasName}.${sqlHostSuffix}'
+var serverName = split(sqlServerFqdn, '.')[0]
 
 resource stg 'Microsoft.Storage/storageAccounts@2023-05-01' = {
   name: toLower('${namePrefix}funcstg')
@@ -90,10 +91,10 @@ resource aliasRepoint 'Microsoft.Resources/deploymentScripts@2023-08-01' = {
       set -euo pipefail
 
       RG='${resourceGroup().name}'
-      SERVER_NAME='${split(sqlServerFqdn, ".")[0]}'
+      SERVER_NAME='${serverName}'
       ALIAS='${sqlAliasName}'
 
-      echo "Ensuring SQL DNS alias '${sqlAliasName}' points to server '${split(sqlServerFqdn, ".")[0]}' in RG '${resourceGroup().name}'..."
+      echo "Ensuring SQL DNS alias '${sqlAliasName}' points to server '${serverName}' in RG '${resourceGroup().name}'..."
 
       # 1) If alias already present on the desired server, exit.
       if az sql server dns-alias show --name "$ALIAS" --resource-group "$RG" --server "$SERVER_NAME" >/dev/null 2>&1; then
@@ -135,3 +136,4 @@ resource aliasRepointRole 'Microsoft.Authorization/roleAssignments@2022-04-01' =
 output principalId string = app.identity.principalId
 output functionAppName string = app.name
 output webAppUrl string = 'https://${app.properties.defaultHostName}'
+output sqlServerFqdnOut string = sqlServerFqdn
