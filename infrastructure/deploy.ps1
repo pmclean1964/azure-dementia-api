@@ -70,40 +70,40 @@ az functionapp config appsettings set `
     "WEBSITE_NODE_DEFAULT_VERSION=~18" `
     "AzureWebJobsStorage=$storageConnectionString" | Out-Null
 
-# Retrieve DB secrets from Key Vault
-Write-Host "Retrieving DB secrets from Key Vault: $KeyVaultName" -ForegroundColor Cyan
-$FQDN = az keyvault secret show --vault-name $KeyVaultName --name "db-fqdn" --query value -o tsv
-$DBNAME = az keyvault secret show --vault-name $KeyVaultName --name "db-name" --query value -o tsv
-# 'db-login' and 'db-password' may be optional in some environments
-$DBLOGIN = $null
-$DBPASS = $null
-try { $DBLOGIN = az keyvault secret show --vault-name $KeyVaultName --name "db-login" --query value -o tsv } catch { Write-Host "db-login not found or not accessible; continuing" -ForegroundColor Yellow }
-try { $DBPASS = az keyvault secret show --vault-name $KeyVaultName --name "db-password" --query value -o tsv } catch { Write-Host "db-password not found or not accessible; continuing" -ForegroundColor Yellow }
-$DBRG = az keyvault secret show --vault-name $KeyVaultName --name "db-resource-group" --query value -o tsv
+# Configure managed identity and Key Vault references so the app reads DB info from Key Vault at runtime
+Write-Host "Ensuring system-assigned managed identity on the Function App" -ForegroundColor Cyan
+az functionapp identity assign --name $FunctionAppName --resource-group $ResourceGroupName | Out-Null
+$principalId = az functionapp identity show --name $FunctionAppName --resource-group $ResourceGroupName --query principalId -o tsv
 
-Write-Host "Secrets retrieved:" -ForegroundColor Green
-Write-Host "  db-fqdn:           $FQDN"
-Write-Host "  db-name:           $DBNAME"
-Write-Host "  db-login:          $DBLOGIN"
-Write-Host "  db-password:       $(if ($DBPASS) { '***' } else { '' })"
-Write-Host "  db-resource-group: $DBRG"
-
-# Apply DB secrets as app settings to the Function App
-Write-Host "Applying DB secrets to Function App settings" -ForegroundColor Cyan
-$settings = @(
-  "DB_FQDN=$FQDN",
-  "DB_NAME=$DBNAME",
-  "DB_LOGIN=$DBLOGIN",
-  "DB_PASSWORD=$DBPASS",
-  "DB_RESOURCE_GROUP=$DBRG"
-) | Where-Object { $_ -and $_ -notmatch "=\s*$" } # drop empty values
-
-if ($settings.Count -gt 0) {
-  az functionapp config appsettings set `
-    --name $FunctionAppName `
-    --resource-group $ResourceGroupName `
-    --settings $settings | Out-Null
+# Grant Key Vault access via RBAC (Key Vault should use Azure RBAC for secrets)
+$kvId = az keyvault show --name $KeyVaultName --query id -o tsv
+Write-Host "Granting 'Key Vault Secrets User' role to Function App identity on Key Vault" -ForegroundColor Cyan
+# Create role assignment; ignore error if it already exists
+try {
+  az role assignment create `
+    --assignee-object-id $principalId `
+    --assignee-principal-type ServicePrincipal `
+    --role "Key Vault Secrets User" `
+    --scope $kvId | Out-Null
+} catch {
+  Write-Host "Role assignment may already exist; continuing" -ForegroundColor Yellow
 }
+
+# Apply DB settings as Key Vault references (no secrets stored in app settings)
+Write-Host "Applying DB Key Vault reference app settings to Function App" -ForegroundColor Cyan
+$kvBase = "https://$KeyVaultName.vault.azure.net/secrets"
+$settings = @(
+  "DB_FQDN=@Microsoft.KeyVault(SecretUri=$kvBase/db-fqdn)",
+  "DB_NAME=@Microsoft.KeyVault(SecretUri=$kvBase/db-name)",
+  "DB_LOGIN=@Microsoft.KeyVault(SecretUri=$kvBase/db-login)",
+  "DB_PASSWORD=@Microsoft.KeyVault(SecretUri=$kvBase/db-password)",
+  "DB_RESOURCE_GROUP=@Microsoft.KeyVault(SecretUri=$kvBase/db-resource-group)"
+)
+
+az functionapp config appsettings set `
+  --name $FunctionAppName `
+  --resource-group $ResourceGroupName `
+  --settings $settings | Out-Null
 
 # Output a summary object for automation pipelines
 Write-Output (ConvertTo-Json -Depth 4 @{ 

@@ -122,6 +122,7 @@ CI/CD with GitHub Actions
   - KEY_VAULT_RESOURCE_GROUP
   - KEY_VAULT_NAME
 - Optional: You may also supply a parameters JSON file path via the parametersFile input (defaults to infrastructure/parameters.example.json). Any missing inputs/variables will be read from this file if present.
+- Note: The parameters file may optionally include resourceGroupName; if present, the workflow will read it to set the target resource group when inputs/variables are missing.
 - Manual run example (from GitHub UI):
   - Run workflow "Deploy Infrastructure (Bicep)" with inputs:
     - resourceGroupName=rg-dementia-api
