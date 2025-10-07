@@ -155,3 +155,35 @@ Troubleshooting
     1) Run deployment with enableKvRbacAssignment=false (default) and grant Key Vault access separately; or
     2) Have a privileged identity run the deployment with enableKvRbacAssignment=true; or
     3) If your Key Vault uses access policies (not Azure RBAC), grant the Function App identity get/list permissions on secrets via access policies.
+
+
+How to find your API endpoint (Function App URL)
+- After deployment completes, you can discover the base URL and function routes in a few ways:
+
+1) From deployment outputs (recommended)
+- The Bicep template outputs functionAppBaseUrl and functionAppDefaultHostname.
+- Using Azure CLI, fetch them:
+  az deployment group show ^
+    --resource-group rg-dementia-api ^
+    --name main ^
+    --query "properties.outputs.{url:functionAppBaseUrl.value, host:functionAppDefaultHostname.value}" -o tsv
+- The base URL will look like: https://<your-func-app>.azurewebsites.net
+- Function invocation URLs follow: https://<your-func-app>.azurewebsites.net/api/<FunctionName>
+
+2) Via Azure CLI directly on the Function App
+- Get the default hostname:
+  az functionapp show -g rg-dementia-api -n func-dementia-api-001 --query defaultHostName -o tsv
+- List functions deployed to the app:
+  az functionapp function list -g rg-dementia-api -n func-dementia-api-001 -o table
+- Construct the URL as: https://<defaultHostName>/api/<FunctionName>
+
+3) In Azure Portal
+- Go to your Function App > Overview. Copy the Default domain or click Browse.
+- Go to Functions blade to see function names and use Get Function URL.
+
+Function keys and authorization
+- If your HTTP-trigger function uses authLevel=function or admin, you need a key.
+- Retrieve a function key with CLI:
+  az functionapp function keys list -g rg-dementia-api -n func-dementia-api-001 --function-name <FunctionName> --query default -o tsv
+- Then call: https://<defaultHostName>/api/<FunctionName>?code=<the-key>
+- If authLevel=anonymous, no key is required.

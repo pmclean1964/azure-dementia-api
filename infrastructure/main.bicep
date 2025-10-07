@@ -150,3 +150,5 @@ output storageAccountResourceId string = stg.id
 output keyVaultResourceId string = kv.id
 output functionAppNameOut string = functionAppName
 output storageAccountNameOut string = storageAccountName
+output functionAppDefaultHostname string = func.properties.defaultHostName
+output functionAppBaseUrl string = 'https://${func.properties.defaultHostName}'
