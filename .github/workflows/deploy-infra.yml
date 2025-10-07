@@ -126,9 +126,17 @@ jobs:
         uses: azure/cli@v2
         with:
           inlineScript: |
-            az group create \
+            # Create RG only if it does not exist. If it exists in another location, reuse it as-is.
+            EXIST_LOC=$(az group show \
               --name '${{ steps.params.outputs.rg }}' \
-              --location '${{ steps.params.outputs.location }}'
+              --query location -o tsv 2>/dev/null || true)
+            if [[ -z "$EXIST_LOC" ]]; then
+              az group create \
+                --name '${{ steps.params.outputs.rg }}' \
+                --location '${{ steps.params.outputs.location }}'
+            else
+              echo "Resource group '${{ steps.params.outputs.rg }}' already exists in location '$EXIST_LOC'. Reusing it without changing location."
+            fi
             az deployment group what-if \
               --resource-group '${{ steps.params.outputs.rg }}' \
               --template-file infrastructure/main.bicep \
@@ -143,9 +151,17 @@ jobs:
         uses: azure/cli@v2
         with:
           inlineScript: |
-            az group create \
+            # Create RG only if it does not exist. If it exists in another location, reuse it as-is.
+            EXIST_LOC=$(az group show \
               --name '${{ steps.params.outputs.rg }}' \
-              --location '${{ steps.params.outputs.location }}'
+              --query location -o tsv 2>/dev/null || true)
+            if [[ -z "$EXIST_LOC" ]]; then
+              az group create \
+                --name '${{ steps.params.outputs.rg }}' \
+                --location '${{ steps.params.outputs.location }}'
+            else
+              echo "Resource group '${{ steps.params.outputs.rg }}' already exists in location '$EXIST_LOC'. Reusing it without changing location."
+            fi
             az deployment group create \
               --resource-group '${{ steps.params.outputs.rg }}' \
               --template-file infrastructure/main.bicep \
