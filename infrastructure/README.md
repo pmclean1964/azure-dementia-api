@@ -134,7 +134,7 @@ CI/CD with GitHub Actions
     - parametersFile=infrastructure/parameters.example.json
   - Optionally enable whatIf=true to preview changes.
 - On push to main affecting files under infrastructure/**, the workflow will deploy using repository Variables when inputs are not provided. If any required values are still missing, it will attempt to read them from the default parameters file before failing with guidance.
-- Note: If the specified resource group already exists in a different location, the workflow will reuse the existing resource group as-is and will not attempt to change its location.
+- Note: If the specified resource group already exists in a different location than requested, the workflow will now fail with guidance (see next section) to ensure all resources are created in the intended region (e.g., eastus2).
 
 
 Key Vault access and RBAC permissions

@@ -18,7 +18,7 @@ param(
 # Example usage:
 #   pwsh ./infrastructure/deploy.ps1 `
 #       -SubscriptionId "00000000-0000-0000-0000-000000000000" `
-#       -Location "westeurope" `
+#       -Location "eastus2" `
 #       -ResourceGroupName "rg-dementia-api" `
 #       -FunctionAppName "func-dementia-api-001" `
 #       -StorageAccountName "stgdementiaapi001"
