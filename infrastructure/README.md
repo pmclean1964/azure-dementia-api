@@ -233,12 +233,13 @@ How to deploy
      --parameters location=eastus2 functionAppName=func-dementia-api-001 storageAccountName=stgdementiaapi001 ^
                  keyVaultResourceGroup=rg-dementia-api keyVaultName=dementiadbsecrets
 
-Notes
-- Storage account names must be globally unique and 3-24 lowercase alphanumeric.
-- Function App names must be globally unique within Azure.
-- This template uses App Service Key Vault references so the Function App reads secret values at runtime. Ensure the Function App managed identity has access to the Key Vault (the template assigns the Key Vault Secrets User role if Key Vault uses RBAC).
-- If your Key Vault uses access policies (not RBAC), grant the Function App identity get/list permissions on secrets manually, or adapt the template to manage access policies in that Key Vault resource scope.
-- To preview changes without applying them, use:
+ Notes
+ - Storage account names must be globally unique and 3-24 lowercase alphanumeric.
+ - Function App names must be globally unique within Azure.
+ - This template uses App Service Key Vault references so the Function App reads secret values at runtime. Ensure the Function App managed identity has access to the Key Vault (the template assigns the Key Vault Secrets User role if Key Vault uses RBAC).
+ - If your Key Vault uses access policies (not RBAC), grant the Function App identity get/list permissions on secrets manually, or adapt the template to manage access policies in that Key Vault resource scope.
+ - The template defaults the location parameter to the resource group's location. If you pass a location, ensure it matches the resource group region.
+ - To preview changes without applying them, use:
    az deployment group what-if --resource-group rg-dementia-api --template-file infrastructure\main.bicep --parameters @infrastructure\parameters.example.json
 
 Migration note

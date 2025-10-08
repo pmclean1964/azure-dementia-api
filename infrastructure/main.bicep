@@ -5,9 +5,8 @@
 // - Configures app settings including Key Vault references for DB_* secrets
 // - Grants the Function App access to Key Vault secrets via RBAC (Key Vault Secrets User)
 
-@description('Azure region for all resources')
-@allowed([ 'eastus2' ])
-param location string
+@description('Azure region for all resources (defaults to the resource group location)')
+param location string = resourceGroup().location
 
 @description('Name of the Function App (must be globally unique)')
 param functionAppName string
