@@ -13,6 +13,9 @@
     "dbNameSecretName": { "value": "db-name" },
     "dbLoginSecretName": { "value": "db-login" },
     "dbPasswordSecretName": { "value": "db-password" },
-    "dbResourceGroupSecretName": { "value": "db-resource-group" }
+    "dbResourceGroupSecretName": { "value": "db-resource-group" },
+    "enableHealthCheck": { "value": true },
+    "healthCheckPath": { "value": "/api/healthz?deep=db" },
+    "healthCheckMaxPingFailures": { "value": 10 }
   }
 }

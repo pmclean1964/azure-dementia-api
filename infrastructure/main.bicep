@@ -38,6 +38,15 @@ param dbPasswordSecretName string = 'db-password'
 @description('Secret name for DB resource group in Key Vault')
 param dbResourceGroupSecretName string = 'db-resource-group'
 
+@description('Enable Azure App Service Health Check configuration on the Function App')
+param enableHealthCheck bool = true
+
+@description('Path that the platform will ping for health checks; implement this endpoint to perform a lightweight DB query (e.g., SELECT 1)')
+param healthCheckPath string = '/api/healthz?deep=db'
+
+@description('Max consecutive failed health pings before instance is recycled')
+param healthCheckMaxPingFailures int = 10
+
 // Existing Key Vault reference (assumed to exist in the same subscription)
 resource kv 'Microsoft.KeyVault/vaults@2023-07-01' existing = {
   name: keyVaultName
@@ -61,6 +70,56 @@ resource stg 'Microsoft.Storage/storageAccounts@2023-01-01' = {
 // Build the connection string using a resource reference to listKeys()
 var primaryStorageKey = stg.listKeys().keys[0].value
 var storageConn = 'DefaultEndpointsProtocol=https;AccountName=${storageAccountName};AccountKey=${primaryStorageKey};EndpointSuffix=${environment().suffixes.storage}'
+
+// Compose app settings, including optional health check tuning
+var baseAppSettings = [
+  {
+    name: 'FUNCTIONS_WORKER_RUNTIME'
+    value: 'node'
+  }
+  {
+    name: 'FUNCTIONS_EXTENSION_VERSION'
+    value: '~4'
+  }
+  {
+    name: 'WEBSITE_NODE_DEFAULT_VERSION'
+    value: '~18'
+  }
+  {
+    name: 'AzureWebJobsStorage'
+    value: storageConn
+  }
+  // DB settings resolved at runtime from Key Vault via App Service Key Vault references
+  {
+    name: 'DB_FQDN'
+    value: '@Microsoft.KeyVault(SecretUri=https://${keyVaultName}.vault.azure.net/secrets/${dbFqdnSecretName})'
+  }
+  {
+    name: 'DB_NAME'
+    value: '@Microsoft.KeyVault(SecretUri=https://${keyVaultName}.vault.azure.net/secrets/${dbNameSecretName})'
+  }
+  {
+    name: 'DB_LOGIN'
+    value: '@Microsoft.KeyVault(SecretUri=https://${keyVaultName}.vault.azure.net/secrets/${dbLoginSecretName})'
+  }
+  {
+    name: 'DB_PASSWORD'
+    value: '@Microsoft.KeyVault(SecretUri=https://${keyVaultName}.vault.azure.net/secrets/${dbPasswordSecretName})'
+  }
+  {
+    name: 'DB_RESOURCE_GROUP'
+    value: '@Microsoft.KeyVault(SecretUri=https://${keyVaultName}.vault.azure.net/secrets/${dbResourceGroupSecretName})'
+  }
+]
+
+var healthAppSettings = enableHealthCheck ? [
+  {
+    name: 'WEBSITE_HEALTHCHECK_MAXPINGFAILURES'
+    value: string(healthCheckMaxPingFailures)
+  }
+] : []
+
+var appSettings = concat(baseAppSettings, healthAppSettings)
 
 // Linux Consumption plan for Functions
 resource plan 'Microsoft.Web/serverfarms@2022-09-01' = {
@@ -92,45 +151,8 @@ resource func 'Microsoft.Web/sites@2022-09-01' = {
     httpsOnly: true
     siteConfig: {
       linuxFxVersion: 'Node|18'
-      appSettings: [
-        {
-          name: 'FUNCTIONS_WORKER_RUNTIME'
-          value: 'node'
-        }
-        {
-          name: 'FUNCTIONS_EXTENSION_VERSION'
-          value: '~4'
-        }
-        {
-          name: 'WEBSITE_NODE_DEFAULT_VERSION'
-          value: '~18'
-        }
-        {
-          name: 'AzureWebJobsStorage'
-          value: storageConn
-        }
-        // DB settings resolved at runtime from Key Vault via App Service Key Vault references
-        {
-          name: 'DB_FQDN'
-          value: '@Microsoft.KeyVault(SecretUri=https://${keyVaultName}.vault.azure.net/secrets/${dbFqdnSecretName})'
-        }
-        {
-          name: 'DB_NAME'
-          value: '@Microsoft.KeyVault(SecretUri=https://${keyVaultName}.vault.azure.net/secrets/${dbNameSecretName})'
-        }
-        {
-          name: 'DB_LOGIN'
-          value: '@Microsoft.KeyVault(SecretUri=https://${keyVaultName}.vault.azure.net/secrets/${dbLoginSecretName})'
-        }
-        {
-          name: 'DB_PASSWORD'
-          value: '@Microsoft.KeyVault(SecretUri=https://${keyVaultName}.vault.azure.net/secrets/${dbPasswordSecretName})'
-        }
-        {
-          name: 'DB_RESOURCE_GROUP'
-          value: '@Microsoft.KeyVault(SecretUri=https://${keyVaultName}.vault.azure.net/secrets/${dbResourceGroupSecretName})'
-        }
-      ]
+      healthCheckPath: enableHealthCheck ? healthCheckPath : null
+      appSettings: appSettings
     }
   }
 }

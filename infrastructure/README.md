@@ -158,7 +158,19 @@ Troubleshooting
     3) If your Key Vault uses access policies (not Azure RBAC), grant the Function App identity get/list permissions on secrets via access policies.
 
 
-How to find your API endpoint (Function App URL)
+    Health check that validates DB connectivity during runtime
+    - This deployment configures the Azure App Service Health Check for the Function App when enableHealthCheck=true (default).
+    - It sets siteConfig.healthCheckPath to healthCheckPath (default: /api/healthz?deep=db) and tunes WEBSITE_HEALTHCHECK_MAXPINGFAILURES.
+    - Your application must implement the healthCheckPath endpoint and perform a lightweight database query (e.g., SELECT 1) using the same connection mechanism as production. The endpoint should return HTTP 200 when DB connectivity is healthy.
+    - New parameters:
+      - enableHealthCheck (bool, default true) — toggles the platform health check configuration.
+      - healthCheckPath (string, default /api/healthz?deep=db) — the HTTP path the platform pings.
+      - healthCheckMaxPingFailures (int, default 10) — consecutive failures before instance recycle.
+    - Notes:
+      - The platform will continuously probe this path; consider keeping the DB check lightweight and fast.
+      - If you disable the health check or do not implement the endpoint, set enableHealthCheck=false.
+
+    How to find your API endpoint (Function App URL)
 - After deployment completes, you can discover the base URL and function routes in a few ways:
 
 1) From deployment outputs (recommended)
