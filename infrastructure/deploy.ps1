@@ -28,8 +28,19 @@ $ErrorActionPreference = "Stop"
 Write-Host "Setting subscription to $SubscriptionId" -ForegroundColor Cyan
 az account set --subscription $SubscriptionId | Out-Null
 
-Write-Host "Ensuring resource group '$ResourceGroupName' in '$Location'" -ForegroundColor Cyan
-az group create --name $ResourceGroupName --location $Location | Out-Null
+Write-Host "Checking resource group '$ResourceGroupName' in requested location '$Location'" -ForegroundColor Cyan
+$existingLocation = az group show --name $ResourceGroupName --query location -o tsv 2>$null
+if ([string]::IsNullOrEmpty($existingLocation)) {
+  Write-Host "Resource group '$ResourceGroupName' does not exist. Creating it in '$Location'." -ForegroundColor Cyan
+  az group create --name $ResourceGroupName --location $Location | Out-Null
+} else {
+  if ($existingLocation -ne $Location) {
+    Write-Error "Error: Resource group '$ResourceGroupName' already exists in location '$existingLocation', which does not match the requested location '$Location'."
+    Write-Error "Please either: (1) choose a different resource group name, (2) delete or recreate the existing RG in the desired region, or (3) update the requested location to '$existingLocation'."
+    exit 1
+  }
+  Write-Host "Resource group '$ResourceGroupName' already exists in location '$existingLocation'. Reusing it." -ForegroundColor Yellow
+}
 
 # Create a general-purpose v2 Storage Account (required by Azure Functions)
 Write-Host "Ensuring storage account '$StorageAccountName'" -ForegroundColor Cyan
