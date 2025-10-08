@@ -1,0 +1,13 @@
+{
+  "name": "dementia-api-serverless",
+  "version": "1.0.0",
+  "description": "Azure Functions app for Dementia API - includes /api/healthz endpoint for DB connectivity checks",
+  "private": true,
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "@azure/identity": "^4.4.1",
+    "mssql": "^10.0.2"
+  }
+}
