@@ -325,7 +325,8 @@ Function keys and authorization
 - If authLevel=anonymous, no key is required.
 
 Region and resource group location enforcement
-- This repository enforces that the existing resource group location must match the requested deployment location to avoid accidental cross-region deployments.
+- The Bicep template restricts the location parameter to eastus2. Deployments providing any other region will fail validation before creating resources.
+- This repository also enforces that the existing resource group location must match the requested deployment location to avoid accidental cross-region deployments.
 - If the RG exists in a different region (e.g., westeurope) than requested (e.g., eastus2), the workflow will fail with guidance instead of reusing it.
 - To proceed, either:
   1) Choose a new resourceGroupName that doesn’t exist and will be created in the requested location; or

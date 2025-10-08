@@ -6,6 +6,7 @@
 // - Grants the Function App access to Key Vault secrets via RBAC (Key Vault Secrets User)
 
 @description('Azure region for all resources')
+@allowed([ 'eastus2' ])
 param location string
 
 @description('Name of the Function App (must be globally unique)')
