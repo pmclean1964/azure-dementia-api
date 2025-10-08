@@ -126,7 +126,7 @@ jobs:
         uses: azure/cli@v2
         with:
           inlineScript: |
-            # Create RG only if it does not exist. If it exists in another location, reuse it as-is.
+            # Create RG only if it does not exist. If it exists in another location and does not match requested location, fail.
             EXIST_LOC=$(az group show \
               --name '${{ steps.params.outputs.rg }}' \
               --query location -o tsv 2>/dev/null || true)
@@ -135,7 +135,12 @@ jobs:
                 --name '${{ steps.params.outputs.rg }}' \
                 --location '${{ steps.params.outputs.location }}'
             else
-              echo "Resource group '${{ steps.params.outputs.rg }}' already exists in location '$EXIST_LOC'. Reusing it without changing location."
+              if [[ "$EXIST_LOC" != "${{ steps.params.outputs.location }}" ]]; then
+                echo "Error: Resource group '${{ steps.params.outputs.rg }}' already exists in location '$EXIST_LOC', which does not match the requested location '${{ steps.params.outputs.location }}'." >&2
+                echo "Please either: (1) choose a different resource group name, (2) delete or recreate the existing RG in the desired region, or (3) update the requested location to '$EXIST_LOC'." >&2
+                exit 1
+              fi
+              echo "Resource group '${{ steps.params.outputs.rg }}' already exists in location '$EXIST_LOC'. Reusing it."
             fi
             az deployment group what-if \
               --resource-group '${{ steps.params.outputs.rg }}' \
@@ -151,7 +156,7 @@ jobs:
         uses: azure/cli@v2
         with:
           inlineScript: |
-            # Create RG only if it does not exist. If it exists in another location, reuse it as-is.
+            # Create RG only if it does not exist. If it exists in another location and does not match requested location, fail.
             EXIST_LOC=$(az group show \
               --name '${{ steps.params.outputs.rg }}' \
               --query location -o tsv 2>/dev/null || true)
@@ -160,7 +165,12 @@ jobs:
                 --name '${{ steps.params.outputs.rg }}' \
                 --location '${{ steps.params.outputs.location }}'
             else
-              echo "Resource group '${{ steps.params.outputs.rg }}' already exists in location '$EXIST_LOC'. Reusing it without changing location."
+              if [[ "$EXIST_LOC" != "${{ steps.params.outputs.location }}" ]]; then
+                echo "Error: Resource group '${{ steps.params.outputs.rg }}' already exists in location '$EXIST_LOC', which does not match the requested location '${{ steps.params.outputs.location }}'." >&2
+                echo "Please either: (1) choose a different resource group name, (2) delete or recreate the existing RG in the desired region, or (3) update the requested location to '$EXIST_LOC'." >&2
+                exit 1
+              fi
+              echo "Resource group '${{ steps.params.outputs.rg }}' already exists in location '$EXIST_LOC'. Reusing it."
             fi
             az deployment group create \
               --resource-group '${{ steps.params.outputs.rg }}' \
@@ -171,5 +181,3 @@ jobs:
                 storageAccountName='${{ steps.params.outputs.storageAccountName }}' \
                 keyVaultResourceGroup='${{ steps.params.outputs.keyVaultResourceGroup }}' \
                 keyVaultName='${{ steps.params.outputs.keyVaultName }}' \
-              --query "{name:name, status:properties.provisioningState}" \
-              -o jsonc
