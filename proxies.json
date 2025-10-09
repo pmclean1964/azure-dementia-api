@@ -1,0 +1,11 @@
+{
+  "$schema": "http://json.schemastore.org/proxies",
+  "proxies": {
+    "docsRoot": {
+      "matchCondition": {
+        "route": "/docs"
+      },
+      "backendUri": "{request.scheme}://{request.host}/api/docs"
+    }
+  }
+}

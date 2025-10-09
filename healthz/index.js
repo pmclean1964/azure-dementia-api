@@ -92,7 +92,7 @@ module.exports = async function (context, req) {
     context.res = {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
-      body: { ok: true, mode: 'shallow' }
+      body: { ok: true, mode: 'shallow', timestamp: new Date().toISOString() }
     };
     return;
   }
@@ -108,14 +108,14 @@ module.exports = async function (context, req) {
     context.res = {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
-      body: { ok: true, mode: 'deep', db: { status: 'up', durationMs: db.durationMs } }
+      body: { ok: true, mode: 'deep', timestamp: new Date().toISOString(), db: { status: 'up', durationMs: db.durationMs } }
     };
   } else {
     // Return minimal error information; avoid leaking sensitive details
     context.res = {
       status: 503,
       headers: { 'Content-Type': 'application/json' },
-      body: { ok: false, mode: 'deep', db: { status: 'down', reason: db.reason } }
+      body: { ok: false, mode: 'deep', timestamp: new Date().toISOString(), db: { status: 'down', reason: db.reason } }
     };
   }
 };
