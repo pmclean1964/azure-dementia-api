@@ -8,7 +8,7 @@ on:
         required: false
         type: string
       location:
-        description: Azure location (e.g., westeurope)
+        description: Azure location
         required: false
         type: string
       functionAppName:
