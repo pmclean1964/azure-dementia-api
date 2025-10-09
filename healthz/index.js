@@ -23,6 +23,9 @@ async function getAzureSqlAccessToken() {
   }
 }
 
+
+// hope thhis works
+
 async function checkDbConnectivity(signal) {
   const server = process.env.DB_FQDN;
   const database = process.env.DB_NAME;
