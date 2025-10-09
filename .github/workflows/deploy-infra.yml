@@ -59,6 +59,14 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
+      - name: Show Azure context
+        uses: azure/cli@v2
+        with:
+          inlineScript: |
+            echo "Subscription from secret: ${{ secrets.AZURE_SUBSCRIPTION_ID }}"
+            az account show -o table
+            echo "Active subscription:" $(az account show --query id -o tsv)
+
       - name: Compute parameters
         id: params
         shell: bash
@@ -121,6 +129,13 @@ jobs:
           echo "keyVaultResourceGroup=$KV_RG" >> $GITHUB_OUTPUT
           echo "keyVaultName=$KV_NAME" >> $GITHUB_OUTPUT
 
+      - name: Build Bicep to ARM JSON
+        uses: azure/cli@v2
+        with:
+          inlineScript: |
+            az bicep install
+            az bicep build --file infrastructure/main.bicep --out-file infrastructure/main.json
+
       - name: What-If (preview)
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.whatIf == true }}
         uses: azure/cli@v2
@@ -140,7 +155,7 @@ jobs:
             fi
             az deployment group what-if \
               --resource-group '${{ steps.params.outputs.rg }}' \
-              --template-file infrastructure/main.bicep \
+              --template-file infrastructure/main.json \
               --parameters \
                 location='${{ steps.params.outputs.location }}' \
                 functionAppName='${{ steps.params.outputs.functionAppName }}' \
@@ -166,7 +181,7 @@ jobs:
             fi
             az deployment group create \
               --resource-group '${{ steps.params.outputs.rg }}' \
-              --template-file infrastructure/main.bicep \
+              --template-file infrastructure/main.json \
               --parameters \
                 location='${{ steps.params.outputs.location }}' \
                 functionAppName='${{ steps.params.outputs.functionAppName }}' \
