@@ -122,7 +122,7 @@ jobs:
           echo "keyVaultName=$KV_NAME" >> $GITHUB_OUTPUT
 
       - name: What-If (preview)
-        if: inputs.whatIf == true
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.whatIf == true }}
         uses: azure/cli@v2
         with:
           inlineScript: |
@@ -180,4 +180,4 @@ jobs:
                 functionAppName='${{ steps.params.outputs.functionAppName }}' \
                 storageAccountName='${{ steps.params.outputs.storageAccountName }}' \
                 keyVaultResourceGroup='${{ steps.params.outputs.keyVaultResourceGroup }}' \
-                keyVaultName='${{ steps.params.outputs.keyVaultName }}' \
+                keyVaultName='${{ steps.params.outputs.keyVaultName }}'
