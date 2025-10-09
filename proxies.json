@@ -6,6 +6,18 @@
         "route": "/docs"
       },
       "backendUri": "{request.scheme}://{request.host}/api/docs"
+    },
+    "rootToDocs": {
+      "matchCondition": {
+        "route": "/"
+      },
+      "backendUri": "{request.scheme}://{request.host}/api/docs"
+    },
+    "openapiRoot": {
+      "matchCondition": {
+        "route": "/openapi.json"
+      },
+      "backendUri": "{request.scheme}://{request.host}/api/openapi.json"
     }
   }
 }
