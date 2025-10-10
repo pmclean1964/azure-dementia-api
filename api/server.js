@@ -36,6 +36,7 @@ const swaggerSpec = {
       }
     }
   },
+  security: [{ ApiKeyAuth: [] }],
   paths: {
     '/api/hello': {
       get: {
@@ -82,13 +83,18 @@ const swaggerSpec = {
                 }
               }
             }
+          },
+          '401': {
+            description: 'Missing API key'
+          },
+          '403': {
+            description: 'Invalid API key'
           }
         }
       }
     }
   }
 };
-app.use('/api/doc', swaggerUi.serve, swaggerUi.setup(swaggerSpec, { explorer: true }));
 
 // API key middleware
 const requireApiKey = (req, res, next) => {
@@ -112,6 +118,12 @@ const requireApiKey = (req, res, next) => {
   }
   return next();
 };
+
+// Apply API key authentication to all routes (protects docs and healthz too)
+app.use(requireApiKey);
+
+// Swagger UI setup (protected)
+app.use('/api/doc', swaggerUi.serve, swaggerUi.setup(swaggerSpec, { explorer: true }));
 
 // Health probe endpoint for Azure/App Service or k8s style probes
 app.get('/healthz', (req, res) => {
