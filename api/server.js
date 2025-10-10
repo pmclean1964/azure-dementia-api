@@ -26,11 +26,22 @@ const swaggerSpec = {
   servers: [
     { url: '/', description: 'Current server' }
   ],
+  components: {
+    securitySchemes: {
+      ApiKeyAuth: {
+        type: 'apiKey',
+        in: 'header',
+        name: 'X-API-Key',
+        description: 'Provide the API key. In CI/CD, this should be supplied from the GitHub Secrets API_KEY.'
+      }
+    }
+  },
   paths: {
     '/api/hello': {
       get: {
         summary: 'Hello world sample',
-        description: 'Returns a simple greeting message.',
+        description: 'Returns a simple greeting message. Requires a valid API key.',
+        security: [{ ApiKeyAuth: [] }],
         responses: {
           '200': {
             description: 'Successful response',
@@ -44,6 +55,12 @@ const swaggerSpec = {
                 }
               }
             }
+          },
+          '401': {
+            description: 'Missing API key'
+          },
+          '403': {
+            description: 'Invalid API key'
           }
         }
       }
@@ -73,13 +90,36 @@ const swaggerSpec = {
 };
 app.use('/api/doc', swaggerUi.serve, swaggerUi.setup(swaggerSpec, { explorer: true }));
 
+// API key middleware
+const requireApiKey = (req, res, next) => {
+  const configuredKey = process.env.API_KEY;
+  if (!configuredKey) {
+    // Service misconfiguration: no API key set
+    return res.status(500).json({ error: 'Server configuration error: API key is not set' });
+  }
+  const headerKey = req.header('X-API-Key') || '';
+  // Also allow Authorization: Bearer <key>
+  const auth = req.header('Authorization') || '';
+  let token = headerKey;
+  if (!token && auth.toLowerCase().startsWith('bearer ')) {
+    token = auth.slice(7).trim();
+  }
+  if (!token) {
+    return res.status(401).json({ error: 'API key required' });
+  }
+  if (token !== configuredKey) {
+    return res.status(403).json({ error: 'Invalid API key' });
+  }
+  return next();
+};
+
 // Health probe endpoint for Azure/App Service or k8s style probes
 app.get('/healthz', (req, res) => {
   res.json({ status: 'ok' });
 });
 
-// Sample API endpoint
-app.get('/api/hello', (req, res) => {
+// Sample API endpoint (protected by API key)
+app.get('/api/hello', requireApiKey, (req, res) => {
   res.json({ message: 'hello world' });
 });
 
