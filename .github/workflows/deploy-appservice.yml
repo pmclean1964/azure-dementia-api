@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  id-token: write   # Required for OIDC authentication
+  id-token: write   # Required for OIDC authentication dsfdfg
   contents: read
 
 env:
