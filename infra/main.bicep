@@ -64,7 +64,7 @@ resource webApp 'Microsoft.Web/sites@2023-12-01' = {
         }
         {
           name: 'SCM_DO_BUILD_DURING_DEPLOYMENT'
-          value: 'true'
+          value: 'false'
         }
       ]
       alwaysOn: true
