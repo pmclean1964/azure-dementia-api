@@ -1,0 +1,12 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "location": { "value": "eastus" },
+    "functionAppName": { "value": "my-funcapp-sample" },
+    "storageAccountName": { "value": "mystorageacctsample" },
+    "keyVaultResourceGroup": { "value": "my-kv-resource-group" },
+    "keyVaultName": { "value": "my-keyvault-sample" },
+    "resourceGroupName": { "value": "my-resource-group" }
+  }
+}
