@@ -29,6 +29,23 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
+      - name: Validate required inputs
+        shell: bash
+        run: |
+          missing=()
+          [[ -z "${AZURE_RESOURCE_GROUP}" ]] && missing+=("AZURE_RESOURCE_GROUP")
+          [[ -z "${AZURE_LOCATION}" ]] && missing+=("AZURE_LOCATION")
+          [[ -z "${AZURE_WEBAPP_NAME}" ]] && missing+=("AZURE_WEBAPP_NAME")
+          if (( ${#missing[@]} > 0 )); then
+            echo "Missing required secrets/variables: ${missing[*]}" >&2
+            echo "Set them in the repo's Secrets before re-running the workflow." >&2
+            exit 1
+          fi
+          echo "Using:"
+          echo "  AZURE_RESOURCE_GROUP=${AZURE_RESOURCE_GROUP}"
+          echo "  AZURE_LOCATION=${AZURE_LOCATION}"
+          echo "  AZURE_WEBAPP_NAME=${AZURE_WEBAPP_NAME}"
+
       - name: Ensure resource group exists
         run: |
           az group create -n "$AZURE_RESOURCE_GROUP" -l "$AZURE_LOCATION"
