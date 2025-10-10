@@ -153,11 +153,9 @@ jobs:
               --resource-group '${{ steps.params.outputs.rg }}' \
               --template-file infra/main.json \
               --parameters \
+                name='${{ steps.params.outputs.functionAppName }}' \
                 location='${{ steps.params.outputs.location }}' \
-                functionAppName='${{ steps.params.outputs.functionAppName }}' \
-                storageAccountName='${{ steps.params.outputs.storageAccountName }}' \
-                keyVaultResourceGroup='${{ steps.params.outputs.keyVaultResourceGroup }}' \
-                keyVaultName='${{ steps.params.outputs.keyVaultName }}'
+                apiKey='${{ secrets.API_KEY }}'
 
       - name: Deploy Bicep
         uses: azure/cli@v2
@@ -179,8 +177,6 @@ jobs:
               --resource-group '${{ steps.params.outputs.rg }}' \
               --template-file infra/main.json \
               --parameters \
+                name='${{ steps.params.outputs.functionAppName }}' \
                 location='${{ steps.params.outputs.location }}' \
-                functionAppName='${{ steps.params.outputs.functionAppName }}' \
-                storageAccountName='${{ steps.params.outputs.storageAccountName }}' \
-                keyVaultResourceGroup='${{ steps.params.outputs.keyVaultResourceGroup }}' \
-                keyVaultName='${{ steps.params.outputs.keyVaultName }}'
+                apiKey='${{ secrets.API_KEY }}'
