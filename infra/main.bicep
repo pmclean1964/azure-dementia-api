@@ -31,7 +31,7 @@ resource plan 'Microsoft.Web/serverfarms@2023-12-01' = {
   location: location
   sku: {
     name: sku
-    tier: sku == 'F1' ? 'Free' : (sku startsWith 'B' ? 'Basic' : (sku startsWith 'S' ? 'Standard' : 'PremiumV3'))
+    tier: sku == 'F1' ? 'Free' : (startsWith(sku, 'B') ? 'Basic' : (startsWith(sku, 'S') ? 'Standard' : 'PremiumV3'))
     size: sku
     capacity: 1
   }
@@ -75,3 +75,4 @@ resource webApp 'Microsoft.Web/sites@2023-12-01' = {
 }
 
 output defaultHostName string = webApp.properties.defaultHostName
+output resourceGroupName string = resourceGroupName
