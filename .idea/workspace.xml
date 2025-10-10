@@ -5,8 +5,19 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="59108906-136c-488d-b10f-7bbb74dc189e" name="Changes" comment="start">
-      <change beforePath="$PROJECT_DIR$/.github/workflows/deploy-infra.yml" beforeDir="false" afterPath="$PROJECT_DIR$/.github/workflows/deploy-infra.yml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/doc/function.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/doc/index.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/function.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/index.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs_assets/function.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs_assets/index.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs_indexjs/function.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs_indexjs/index.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/healthz/function.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/healthz/index.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/openapi/function.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/openapi/index.js" beforeDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -81,23 +92,7 @@
       <option name="presentableId" value="Default" />
       <updated>1759712733975</updated>
       <workItem from="1759712735025" duration="32741000" />
-      <workItem from="1760017115104" duration="7079000" />
-    </task>
-    <task id="LOCAL-00011" summary="start">
-      <option name="closed" value="true" />
-      <created>1759780235011</created>
-      <option name="number" value="00011" />
-      <option name="presentableId" value="LOCAL-00011" />
-      <option name="project" value="LOCAL" />
-      <updated>1759780235011</updated>
-    </task>
-    <task id="LOCAL-00012" summary="start">
-      <option name="closed" value="true" />
-      <created>1759782070655</created>
-      <option name="number" value="00012" />
-      <option name="presentableId" value="LOCAL-00012" />
-      <option name="project" value="LOCAL" />
-      <updated>1759782070655</updated>
+      <workItem from="1760017115104" duration="8620000" />
     </task>
     <task id="LOCAL-00013" summary="start">
       <option name="closed" value="true" />
@@ -475,7 +470,23 @@
       <option name="project" value="LOCAL" />
       <updated>1760028117264</updated>
     </task>
-    <option name="localTasksCounter" value="60" />
+    <task id="LOCAL-00060" summary="start">
+      <option name="closed" value="true" />
+      <created>1760028554396</created>
+      <option name="number" value="00060" />
+      <option name="presentableId" value="LOCAL-00060" />
+      <option name="project" value="LOCAL" />
+      <updated>1760028554396</updated>
+    </task>
+    <task id="LOCAL-00061" summary="start">
+      <option name="closed" value="true" />
+      <created>1760054894147</created>
+      <option name="number" value="00061" />
+      <option name="presentableId" value="LOCAL-00061" />
+      <option name="project" value="LOCAL" />
+      <updated>1760054894147</updated>
+    </task>
+    <option name="localTasksCounter" value="62" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
