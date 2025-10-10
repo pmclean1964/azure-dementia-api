@@ -134,7 +134,7 @@ jobs:
         with:
           inlineScript: |
             az bicep install
-            az bicep build --file infrastructure/main.bicep --out-file infrastructure/main.json
+            az bicep build --file infrastructure/main.bicep --outfile infrastructure/main.json
 
       - name: What-If (preview)
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.whatIf == true }}
