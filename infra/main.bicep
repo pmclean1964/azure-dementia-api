@@ -4,6 +4,10 @@ param location string
 @description('Name of the Web App (must be globally unique).')
 param name string
 
+@description('API key used by the application for authenticating requests (sets App Setting API_KEY).')
+@secure()
+param apiKey string
+
 @description('App Service Plan SKU (size). Change for more/less capacity. Common values: F1, B1, B2, B3, S1, P1v3, etc.')
 @allowed([
   'F1'
@@ -65,6 +69,10 @@ resource webApp 'Microsoft.Web/sites@2023-12-01' = {
         {
           name: 'SCM_DO_BUILD_DURING_DEPLOYMENT'
           value: 'false'
+        }
+        {
+          name: 'API_KEY'
+          value: apiKey
         }
       ]
       alwaysOn: true
