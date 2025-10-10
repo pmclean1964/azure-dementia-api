@@ -74,3 +74,11 @@ az deployment group create \
 
 ## Checklist
 Commit & push → Actions should provision and deploy. Visit: https://<webapp>.azurewebsites.net/api/hello
+
+
+## Workflows explained
+- Deploy Azure App Service (Express API): Runs on push to main and on manual dispatch. It logs into Azure, ensures the resource group exists, deploys the App Service infrastructure (Bicep) idempotently, then builds and deploys the API zip.
+- Deploy Infrastructure (Bicep): Now manual-only (workflow_dispatch). Use this when you want to preview or apply infra changes independently (e.g., What-If runs). It no longer runs automatically on push to avoid duplicate/overlapping deployments.
+
+Notes:
+- Because the App Service workflow already deploys infra, having the infra workflow auto-run on push caused two workflows to start on the same commit. Making infra manual keeps push-based CI/CD single-sourced while still enabling on-demand infra operations.

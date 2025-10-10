@@ -36,10 +36,6 @@ on:
         required: false
         default: false
         type: boolean
-  push:
-    branches:
-      - main
-      - master
 
 permissions:
   id-token: write   # required for OIDC login to Azure
