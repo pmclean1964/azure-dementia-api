@@ -119,11 +119,14 @@ const requireApiKey = (req, res, next) => {
   return next();
 };
 
-// Apply API key authentication to all routes (protects docs and healthz too)
-app.use(requireApiKey);
+// Swagger UI setup (public)
+app.use('/api/doc', swaggerUi.serve, swaggerUi.setup(swaggerSpec, { explorer: true, swaggerOptions: { persistAuthorization: true } }));
 
-// Swagger UI setup (protected)
-app.use('/api/doc', swaggerUi.serve, swaggerUi.setup(swaggerSpec, { explorer: true }));
+// Apply API key authentication to all routes except Swagger docs
+app.use((req, res, next) => {
+  if (req.path.startsWith('/api/doc')) return next();
+  return requireApiKey(req, res, next);
+});
 
 // Health probe endpoint for Azure/App Service or k8s style probes
 app.get('/healthz', (req, res) => {
