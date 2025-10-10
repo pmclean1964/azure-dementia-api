@@ -55,7 +55,7 @@ jobs:
           az deployment group create \
             -g "$AZURE_RESOURCE_GROUP" \
             --template-file infra/main.bicep \
-            --parameters name="$AZURE_WEBAPP_NAME" location="$AZURE_LOCATION"
+            --parameters name="$AZURE_WEBAPP_NAME" location="$AZURE_LOCATION" apiKey="${{ secrets.API_KEY }}"
 
       - name: Setup Node.js 20
         uses: actions/setup-node@v4
