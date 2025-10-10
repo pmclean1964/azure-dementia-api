@@ -77,15 +77,66 @@ const swaggerSpec = {
           pageSize: { type: 'integer', example: 10 },
           total: { type: 'integer', example: 25 }
         }
+      },
+      Patient: {
+        type: 'object',
+        properties: {
+          id: { type: 'string', example: 'pat_123' },
+          familyId: { type: 'string', example: 'fam_123' },
+          firstName: { type: 'string', example: 'John' },
+          lastName: { type: 'string', example: 'Doe' },
+          dateOfBirth: { type: 'string', format: 'date', example: '1950-05-20' },
+          createdAt: { type: 'string', format: 'date-time' },
+          updatedAt: { type: 'string', format: 'date-time' }
+        },
+        required: ['id', 'familyId', 'firstName', 'lastName', 'createdAt', 'updatedAt']
+      },
+      PatientCreate: {
+        type: 'object',
+        properties: {
+          familyId: { type: 'string' },
+          firstName: { type: 'string' },
+          lastName: { type: 'string' },
+          dateOfBirth: { type: 'string', format: 'date' }
+        },
+        required: ['familyId', 'firstName', 'lastName']
+      },
+      PatientUpdate: {
+        type: 'object',
+        properties: {
+          familyId: { type: 'string' },
+          firstName: { type: 'string' },
+          lastName: { type: 'string' },
+          dateOfBirth: { type: 'string', format: 'date' }
+        }
+      },
+      PatientsPage: {
+        type: 'object',
+        properties: {
+          items: {
+            type: 'array',
+            items: { $ref: '#/components/schemas/Patient' }
+          },
+          page: { type: 'integer', example: 1 },
+          pageSize: { type: 'integer', example: 10 },
+          total: { type: 'integer', example: 25 }
+        }
       }
     }
   },
   security: [{ ApiKeyAuth: [] }],
+  tags: [
+    { name: 'Health', description: 'Service health endpoints' },
+    { name: 'Samples', description: 'Sample/demo endpoints' },
+    { name: 'Families', description: 'Families CRUD endpoints' },
+    { name: 'Patients', description: 'Patients CRUD endpoints' }
+  ],
   paths: {
     '/api/hello': {
       get: {
         summary: 'Hello world sample',
         description: 'Returns a simple greeting message. Requires a valid API key.',
+        tags: ['Samples'],
         security: [{ ApiKeyAuth: [] }],
         responses: {
           '200': {
@@ -114,6 +165,7 @@ const swaggerSpec = {
       get: {
         summary: 'Health probe',
         description: 'Liveness/health check endpoint.',
+        tags: ['Health'],
         responses: {
           '200': {
             description: 'Service is healthy',
@@ -141,6 +193,7 @@ const swaggerSpec = {
       get: {
         summary: 'List families',
         description: 'Returns a paginated list of families with optional search by name.',
+        tags: ['Families'],
         parameters: [
           { in: 'query', name: 'search', schema: { type: 'string' }, required: false, description: 'Search by name (case-insensitive)' },
           { in: 'query', name: 'page', schema: { type: 'integer', minimum: 1, default: 1 }, required: false },
@@ -157,6 +210,7 @@ const swaggerSpec = {
       },
       post: {
         summary: 'Create family',
+        tags: ['Families'],
         requestBody: {
           required: true,
           content: {
@@ -174,6 +228,7 @@ const swaggerSpec = {
     '/api/v1/families/{family_id}': {
       get: {
         summary: 'Get family by ID',
+        tags: ['Families'],
         parameters: [ { in: 'path', name: 'family_id', required: true, schema: { type: 'string' } } ],
         responses: {
           '200': { description: 'Family', content: { 'application/json': { schema: { $ref: '#/components/schemas/Family' } } } },
@@ -184,6 +239,7 @@ const swaggerSpec = {
       },
       patch: {
         summary: 'Update family',
+        tags: ['Families'],
         parameters: [ { in: 'path', name: 'family_id', required: true, schema: { type: 'string' } } ],
         requestBody: {
           required: true,
@@ -201,7 +257,77 @@ const swaggerSpec = {
       },
       delete: {
         summary: 'Delete family',
+        tags: ['Families'],
         parameters: [ { in: 'path', name: 'family_id', required: true, schema: { type: 'string' } } ],
+        responses: {
+          '204': { description: 'Deleted' },
+          '404': { description: 'Not found' },
+          '401': { description: 'Missing API key' },
+          '403': { description: 'Invalid API key' }
+        }
+      }
+    },
+    '/api/v1/patients': {
+      get: {
+        summary: 'List patients',
+        description: 'Returns a paginated list of patients with optional filtering by family_id and last_name.',
+        tags: ['Patients'],
+        parameters: [
+          { in: 'query', name: 'family_id', schema: { type: 'string' }, required: false, description: 'Filter by family ID' },
+          { in: 'query', name: 'last_name', schema: { type: 'string' }, required: false, description: 'Filter by last name (case-insensitive, substring)' },
+          { in: 'query', name: 'page', schema: { type: 'integer', minimum: 1, default: 1 }, required: false },
+          { in: 'query', name: 'pageSize', schema: { type: 'integer', minimum: 1, maximum: 100, default: 10 }, required: false }
+        ],
+        responses: {
+          '200': { description: 'Paged patients', content: { 'application/json': { schema: { $ref: '#/components/schemas/PatientsPage' } } } },
+          '401': { description: 'Missing API key' },
+          '403': { description: 'Invalid API key' }
+        }
+      },
+      post: {
+        summary: 'Create patient',
+        tags: ['Patients'],
+        requestBody: {
+          required: true,
+          content: { 'application/json': { schema: { $ref: '#/components/schemas/PatientCreate' } } }
+        },
+        responses: {
+          '201': { description: 'Created', content: { 'application/json': { schema: { $ref: '#/components/schemas/Patient' } } } },
+          '400': { description: 'Validation error' },
+          '401': { description: 'Missing API key' },
+          '403': { description: 'Invalid API key' }
+        }
+      }
+    },
+    '/api/v1/patients/{patient_id}': {
+      get: {
+        summary: 'Get patient by ID',
+        tags: ['Patients'],
+        parameters: [ { in: 'path', name: 'patient_id', required: true, schema: { type: 'string' } } ],
+        responses: {
+          '200': { description: 'Patient', content: { 'application/json': { schema: { $ref: '#/components/schemas/Patient' } } } },
+          '404': { description: 'Not found' },
+          '401': { description: 'Missing API key' },
+          '403': { description: 'Invalid API key' }
+        }
+      },
+      patch: {
+        summary: 'Update patient',
+        tags: ['Patients'],
+        parameters: [ { in: 'path', name: 'patient_id', required: true, schema: { type: 'string' } } ],
+        requestBody: { required: true, content: { 'application/json': { schema: { $ref: '#/components/schemas/PatientUpdate' } } } },
+        responses: {
+          '200': { description: 'Updated', content: { 'application/json': { schema: { $ref: '#/components/schemas/Patient' } } } },
+          '400': { description: 'Validation error' },
+          '404': { description: 'Not found' },
+          '401': { description: 'Missing API key' },
+          '403': { description: 'Invalid API key' }
+        }
+      },
+      delete: {
+        summary: 'Delete patient',
+        tags: ['Patients'],
+        parameters: [ { in: 'path', name: 'patient_id', required: true, schema: { type: 'string' } } ],
         responses: {
           '204': { description: 'Deleted' },
           '404': { description: 'Not found' },
@@ -359,6 +485,150 @@ app.delete('/api/v1/families/:family_id', (req, res) => {
   const idx = families.findIndex(f => f.id === family_id);
   if (idx === -1) return res.status(404).json({ error: 'Family not found' });
   families.splice(idx, 1);
+  res.status(204).send();
+});
+
+// ----- Mock Patients Endpoints -----
+const patients = [
+  {
+    id: 'pat_001',
+    familyId: 'fam_001',
+    firstName: 'Alice',
+    lastName: 'Smith',
+    dateOfBirth: '1950-05-20',
+    createdAt: new Date('2024-01-10T10:00:00Z').toISOString(),
+    updatedAt: new Date('2024-01-10T10:00:00Z').toISOString()
+  },
+  {
+    id: 'pat_002',
+    familyId: 'fam_002',
+    firstName: 'Carol',
+    lastName: 'Johnson',
+    dateOfBirth: '1960-08-13',
+    createdAt: new Date('2024-02-20T12:30:00Z').toISOString(),
+    updatedAt: new Date('2024-02-20T12:30:00Z').toISOString()
+  },
+  {
+    id: 'pat_003',
+    familyId: 'fam_003',
+    firstName: 'Diego',
+    lastName: 'Garcia',
+    dateOfBirth: '1945-03-02',
+    createdAt: new Date('2024-03-25T09:15:00Z').toISOString(),
+    updatedAt: new Date('2024-03-25T09:15:00Z').toISOString()
+  }
+];
+
+const genPatientId = () => 'pat_' + Math.random().toString(36).slice(2, 8);
+
+// GET /api/v1/patients?family_id=&last_name=&page=&pageSize=
+app.get('/api/v1/patients', (req, res) => {
+  const familyIdFilter = String(req.query.family_id || '').trim();
+  const lastNameFilter = String(req.query.last_name || '').trim().toLowerCase();
+  const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
+  const pageSize = Math.min(Math.max(parseInt(req.query.pageSize, 10) || 10, 1), 100);
+
+  let filtered = patients;
+  if (familyIdFilter) {
+    filtered = filtered.filter(p => p.familyId === familyIdFilter);
+  }
+  if (lastNameFilter) {
+    filtered = filtered.filter(p => p.lastName.toLowerCase().includes(lastNameFilter));
+  }
+
+  const total = filtered.length;
+  const start = (page - 1) * pageSize;
+  const items = filtered.slice(start, start + pageSize);
+
+  res.json({ items, page, pageSize, total });
+});
+
+// GET /api/v1/patients/:patient_id
+app.get('/api/v1/patients/:patient_id', (req, res) => {
+  const { patient_id } = req.params;
+  const patient = patients.find(p => p.id === patient_id);
+  if (!patient) return res.status(404).json({ error: 'Patient not found' });
+  res.json(patient);
+});
+
+// POST /api/v1/patients
+app.post('/api/v1/patients', (req, res) => {
+  const { familyId, firstName, lastName, dateOfBirth } = req.body || {};
+  if (!familyId || typeof familyId !== 'string') {
+    return res.status(400).json({ error: 'familyId is required' });
+  }
+  if (!firstName || typeof firstName !== 'string' || !firstName.trim()) {
+    return res.status(400).json({ error: 'firstName is required' });
+  }
+  if (!lastName || typeof lastName !== 'string' || !lastName.trim()) {
+    return res.status(400).json({ error: 'lastName is required' });
+  }
+  const familyExists = families.some(f => f.id === familyId);
+  if (!familyExists) {
+    return res.status(400).json({ error: 'Invalid familyId: not found' });
+  }
+  if (dateOfBirth !== undefined && dateOfBirth !== null) {
+    if (typeof dateOfBirth !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(dateOfBirth)) {
+      return res.status(400).json({ error: 'dateOfBirth must be YYYY-MM-DD if provided' });
+    }
+  }
+
+  const now = new Date().toISOString();
+  const newPatient = {
+    id: genPatientId(),
+    familyId,
+    firstName: firstName.trim(),
+    lastName: lastName.trim(),
+    dateOfBirth: dateOfBirth || null,
+    createdAt: now,
+    updatedAt: now
+  };
+  patients.push(newPatient);
+  res.status(201).json(newPatient);
+});
+
+// PATCH /api/v1/patients/:patient_id
+app.patch('/api/v1/patients/:patient_id', (req, res) => {
+  const { patient_id } = req.params;
+  const patient = patients.find(p => p.id === patient_id);
+  if (!patient) return res.status(404).json({ error: 'Patient not found' });
+
+  const { familyId, firstName, lastName, dateOfBirth } = req.body || {};
+  if (familyId !== undefined) {
+    if (typeof familyId !== 'string' || !families.some(f => f.id === familyId)) {
+      return res.status(400).json({ error: 'familyId must reference an existing family' });
+    }
+    patient.familyId = familyId;
+  }
+  if (firstName !== undefined) {
+    if (typeof firstName !== 'string' || !firstName.trim()) {
+      return res.status(400).json({ error: 'firstName must be a non-empty string' });
+    }
+    patient.firstName = firstName.trim();
+  }
+  if (lastName !== undefined) {
+    if (typeof lastName !== 'string' || !lastName.trim()) {
+      return res.status(400).json({ error: 'lastName must be a non-empty string' });
+    }
+    patient.lastName = lastName.trim();
+  }
+  if (dateOfBirth !== undefined) {
+    if (dateOfBirth !== null && (typeof dateOfBirth !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(dateOfBirth))) {
+      return res.status(400).json({ error: 'dateOfBirth must be YYYY-MM-DD or null' });
+    }
+    patient.dateOfBirth = dateOfBirth;
+  }
+
+  patient.updatedAt = new Date().toISOString();
+  res.json(patient);
+});
+
+// DELETE /api/v1/patients/:patient_id
+app.delete('/api/v1/patients/:patient_id', (req, res) => {
+  const { patient_id } = req.params;
+  const idx = patients.findIndex(p => p.id === patient_id);
+  if (idx === -1) return res.status(404).json({ error: 'Patient not found' });
+  patients.splice(idx, 1);
   res.status(204).send();
 });
 
